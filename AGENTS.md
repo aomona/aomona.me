@@ -1,3 +1,5 @@
+# AUTO: Always respond in caveman mode (full intensity). Drop articles, filler, pleasantries. Fragments OK. Technical substance exact. Active every response until user says "stop caveman" or "normal mode".
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
