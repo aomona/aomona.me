@@ -1,10 +1,11 @@
 "use client";
 
-import type { NagoyaWeather, WeatherKind } from "@/lib/jmaWeather";
+import { type NagoyaWeather, type WeatherKind } from "@/lib/jmaWeather";
 import { GrainGradient } from "grain-gradient/react";
 import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
 import Image from "next/image";
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import gsap from "gsap";
 import { figmaAssets } from "./assets";
 
 type CardGradient = {
@@ -173,7 +174,6 @@ const X_URL = "https://x.com/aomona_";
 const OSU_URL = "https://osu.ppy.sh/users/16801089";
 const TETRIO_URL = "https://ch.tetr.io/u/aomona";
 const VRCHAT_URL = "https://vrchat.com/home/user/usr_d899b13d-3e10-4fd6-a099-e5de87043547";
-
 function GlassCard({
   className = "",
   gradient,
@@ -266,6 +266,7 @@ function GitHubCard({ userAgent, onClick }: { userAgent: string | null; onClick?
     </GlassCard>
   );
 }
+
 
 function NowPlayingCard({
   userAgent,
@@ -440,8 +441,8 @@ function OsuIcon() {
   );
 }
 
-function copyToClipboard(text: string) {
-  void navigator.clipboard.writeText(text);
+function copyToClipboard(text: string, onSuccess?: () => void) {
+  void navigator.clipboard.writeText(text).then(() => onSuccess?.());
 }
 
 function openUrl(url: string) {
@@ -455,84 +456,148 @@ export function SocialCards({
   userAgent: string | null;
   weather: NagoyaWeather;
 }) {
+  const toastRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTlRef = useRef<gsap.core.Timeline | null>(null);
+
+  const showToast = (message: string) => {
+    setToast(message);
+  };
+
+  useLayoutEffect(() => {
+    if (!gridRef.current) return;
+
+    const cards = gridRef.current.children;
+    gsap.set(cards, { y: 24, opacity: 0 });
+    gsap.to(cards, {
+      y: 0,
+      opacity: 1,
+      duration: 0.55,
+      stagger: 0.06,
+      ease: "power2.out",
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!toast || !toastRef.current) return;
+
+    const el = toastRef.current;
+
+    if (toastTlRef.current) {
+      toastTlRef.current.kill();
+    }
+
+    const tl = gsap.timeline();
+    toastTlRef.current = tl;
+
+    gsap.set(el, { y: -20, opacity: 0 });
+
+    tl.to(el, { y: 0, opacity: 1, duration: 0.35, ease: "back.out(1.7)" });
+    tl.to({}, { duration: 1.8 });
+    tl.to(el, {
+      y: -16,
+      opacity: 0,
+      duration: 0.25,
+      ease: "power2.in",
+      onComplete: () => {
+        setToast(null);
+        toastTlRef.current = null;
+      },
+    });
+
+    return () => {
+      tl.kill();
+      toastTlRef.current = null;
+    };
+  }, [toast]);
+
   return (
-    <div className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4">
-      <GitHubCard userAgent={userAgent} onClick={() => openUrl(GITHUB_URL)} />
-      <ServiceCard
-        gradient={gradients.discord}
-        icon={
-          <Image
-            alt="Discord"
-            className="size-full"
-            height={55}
-            src={figmaAssets.discord}
-            width={55}
-          />
-        }
-        title="community"
-        userAgent={userAgent}
-        onClick={() => openUrl(DISCORD_URL)}
-      />
-      <ServiceCard
-        gradient={gradients.x}
-        icon={<Image alt="X" className="size-full" height={55} src={figmaAssets.x} width={55} />}
-        title="@aomona_"
-        userAgent={userAgent}
-        onClick={() => openUrl(X_URL)}
-      />
-      <NowPlayingCard
-        userAgent={userAgent}
-        onClick={() => openUrl(SPOTIFY_TRACK_URL)}
-      />
-      <WeatherCard
-        userAgent={userAgent}
-        weather={weather}
-        onClick={() => openUrl(WEATHER_SEARCH_URL)}
-      />
-      <ServiceCard
-        gradient={gradients.nostr}
-        icon={
-          <Image alt="Nostr" className="size-full" height={55} src={figmaAssets.nostr} width={55} />
-        }
-        iconClassName="size-10"
-        title="nostr"
-        userAgent={userAgent}
-        onClick={() => copyToClipboard(NOSTR_NPROFILE)}
-      />
-      <ServiceCard
-        gradient={gradients.osu}
-        icon={<OsuIcon />}
-        title="@aomona"
-        subtitle="1,780pp"
-        userAgent={userAgent}
-        onClick={() => openUrl(OSU_URL)}
-      />
-      <ServiceCard
-        gradient={gradients.tetrio}
-        icon={
-          <Image
-            alt="TETR.IO"
-            className="size-full"
-            height={55}
-            src={figmaAssets.tetrio}
-            width={55}
-          />
-        }
-        title="@aomona"
-        subtitle="2,349.62TR"
-        userAgent={userAgent}
-        onClick={() => openUrl(TETRIO_URL)}
-      />
-      <ServiceCard
-        gradient={gradients.vrchat}
-        icon={
-          <Image alt="VRChat" className="w-20" height={40} src={figmaAssets.vrchat} width={80} />
-        }
-        iconClassName="w-20 self-start"
-        title="あおもな"
-        userAgent={userAgent}
-        onClick={() => openUrl(VRCHAT_URL)}
-      />
-    </div>
+    <>
+      <div ref={gridRef} className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4">
+        <GitHubCard userAgent={userAgent} onClick={() => openUrl(GITHUB_URL)} />
+        <ServiceCard
+          gradient={gradients.discord}
+          icon={
+            <Image
+              alt="Discord"
+              className="size-full"
+              height={55}
+              src={figmaAssets.discord}
+              width={55}
+            />
+          }
+          title="community"
+          userAgent={userAgent}
+          onClick={() => openUrl(DISCORD_URL)}
+        />
+        <ServiceCard
+          gradient={gradients.x}
+          icon={<Image alt="X" className="size-full" height={55} src={figmaAssets.x} width={55} />}
+          title="@aomona_"
+          userAgent={userAgent}
+          onClick={() => openUrl(X_URL)}
+        />
+        <NowPlayingCard
+          userAgent={userAgent}
+          onClick={() => openUrl(SPOTIFY_TRACK_URL)}
+        />
+        <WeatherCard
+          userAgent={userAgent}
+          weather={weather}
+          onClick={() => openUrl(WEATHER_SEARCH_URL)}
+        />
+        <ServiceCard
+          gradient={gradients.nostr}
+          icon={
+            <Image alt="Nostr" className="size-full" height={55} src={figmaAssets.nostr} width={55} />
+          }
+          iconClassName="size-10"
+          title="nostr"
+          userAgent={userAgent}
+          onClick={() => copyToClipboard(NOSTR_NPROFILE, () => showToast("nprofile copied!"))}
+        />
+        <ServiceCard
+          gradient={gradients.osu}
+          icon={<OsuIcon />}
+          title="@aomona"
+          subtitle="1,780pp"
+          userAgent={userAgent}
+          onClick={() => openUrl(OSU_URL)}
+        />
+        <ServiceCard
+          gradient={gradients.tetrio}
+          icon={
+            <Image
+              alt="TETR.IO"
+              className="size-full"
+              height={55}
+              src={figmaAssets.tetrio}
+              width={55}
+            />
+          }
+          title="@aomona"
+          subtitle="2,349.62TR"
+          userAgent={userAgent}
+          onClick={() => openUrl(TETRIO_URL)}
+        />
+        <ServiceCard
+          gradient={gradients.vrchat}
+          icon={
+            <Image alt="VRChat" className="w-20" height={40} src={figmaAssets.vrchat} width={80} />
+          }
+          iconClassName="w-20 self-start"
+          title="あおもな"
+          userAgent={userAgent}
+          onClick={() => openUrl(VRCHAT_URL)}
+        />
+      </div>
+      <div
+        ref={toastRef}
+        className="pointer-events-none fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full bg-white/90 px-5 py-2 text-sm font-medium text-black shadow-lg backdrop-blur-sm opacity-0"
+      >
+        {toast}
+      </div>
+    </>
   );
 }
