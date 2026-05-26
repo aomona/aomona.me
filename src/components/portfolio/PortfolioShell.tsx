@@ -5,13 +5,16 @@ import { HeroIntro } from "./HeroIntro";
 import { SocialCards } from "./SocialCards";
 import { GrainGradient } from "grain-gradient/react";
 import type { NagoyaWeather } from "@/lib/jmaWeather";
+import type { GitHubContributions } from "@/lib/githubContributions";
 
 export function PortfolioShell({
   userAgent,
   weather,
+  githubContributions,
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
+  githubContributions: GitHubContributions;
 }) {
   const { track, colors, isLoading } = useNowPlaying(30000);
 
@@ -40,6 +43,7 @@ export function PortfolioShell({
             <SocialCards
               userAgent={userAgent}
               weather={weather}
+              githubContributions={githubContributions}
               track={track}
               colors={colors}
               isLoading={isLoading}

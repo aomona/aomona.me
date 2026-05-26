@@ -1,6 +1,7 @@
 "use client";
 
 import { type NagoyaWeather, type WeatherKind } from "@/lib/jmaWeather";
+import type { GitHubContributions } from "@/lib/githubContributions";
 import type { SpotifyTrack } from "@/lib/spotify";
 import { GrainGradient } from "grain-gradient/react";
 import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
@@ -114,57 +115,28 @@ const gradients = {
   },
 } satisfies Record<string, CardGradient>;
 
-const contributionCells = [
-  ["c01", "bg-white/15"],
-  ["c02", "bg-white/15"],
-  ["c03", "bg-[#0e4429]"],
-  ["c04", "bg-white/15"],
-  ["c05", "bg-white/15"],
-  ["c06", "bg-[#39d353]"],
-  ["c07", "bg-[#0e4429]"],
-  ["c08", "bg-[#006d32]"],
-  ["c09", "bg-white/15"],
-  ["c10", "bg-[#0e4429]"],
-  ["c11", "bg-white/15"],
-  ["c12", "bg-white/15"],
-  ["c13", "bg-white/15"],
-  ["c14", "bg-[#0e4429]"],
-  ["c15", "bg-[#0e4429]"],
-  ["c16", "bg-white/15"],
-  ["c17", "bg-white/15"],
-  ["c18", "bg-white/15"],
-  ["c19", "bg-white/15"],
-  ["c20", "bg-white/15"],
-  ["c21", "bg-white/15"],
-  ["c22", "bg-white/15"],
-  ["c23", "bg-white/15"],
-  ["c24", "bg-white/15"],
-  ["c25", "bg-[#0e4429]"],
-  ["c26", "bg-white/15"],
-  ["c27", "bg-white/15"],
-  ["c28", "bg-white/15"],
-  ["c29", "bg-white/15"],
-  ["c30", "bg-white/15"],
-  ["c31", "bg-white/15"],
-  ["c32", "bg-white/15"],
-  ["c33", "bg-white/15"],
-  ["c34", "bg-[#0e4429]"],
-  ["c35", "bg-white/15"],
-  ["c36", "bg-white/15"],
-  ["c37", "bg-[#006d32]"],
-  ["c38", "bg-white/15"],
-  ["c39", "bg-[#0e4429]"],
-  ["c40", "bg-[#006d32]"],
-  ["c41", "bg-white/15"],
-  ["c42", "bg-[#0e4429]"],
-  ["c43", "bg-white/15"],
-  ["c44", "bg-white/15"],
-  ["c45", "bg-white/15"],
-  ["c46", "bg-white/15"],
-  ["c47", "bg-[#26a641]"],
-  ["c48", "bg-[#0e4429]"],
-  ["c49", "bg-white/15"],
-];
+const contributionLevelClasses = [
+  "bg-white/15",
+  "bg-[#0e4429]",
+  "bg-[#006d32]",
+  "bg-[#26a641]",
+  "bg-[#39d353]",
+] as const;
+
+const japanDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+});
+
+function formatJapanDateKey(date: Date) {
+  return japanDateFormatter.format(date);
+}
+
+function getTodayDateKey() {
+  return formatJapanDateKey(new Date());
+}
 
 const NOSTR_NPROFILE =
   "nprofile1qyxhwumn8ghj77tpvf6jumt9qys8wumn8ghj7un9d3shjtt2wqhxummnw3ezuamfwfjkgmn9wshx5uqqyqs52zttyq3sw9x5jej5sx6l2mltl8tmf295fzahpyeupknl0an2sawteyx";
@@ -250,17 +222,42 @@ function ServiceCard({
   );
 }
 
-function ContributionGrid() {
+function ContributionGrid({ contributions }: { contributions: GitHubContributions }) {
+  const todayDateKey = getTodayDateKey();
+  const hasSyncedData = contributions.total !== null;
+
   return (
-    <div className="grid aspect-square h-full max-h-38 grid-cols-7 grid-rows-7 gap-1.25">
-      {contributionCells.map(([id, cell]) => (
-        <div className={`rounded-md ${cell}`} key={id} />
-      ))}
+    <div
+      aria-label={
+        contributions.total === null
+          ? "GitHub contribution graph unavailable"
+          : `${contributions.total} GitHub contributions in the last year`
+      }
+      className="grid aspect-square h-full max-h-38 grid-flow-col grid-cols-7 grid-rows-7 gap-1.25"
+    >
+      {contributions.cells.map((cell, index) => {
+        const isFuture = hasSyncedData && (!cell.date || cell.date > todayDateKey);
+        return (
+          <div
+            className={`rounded-md ${isFuture ? "bg-transparent" : contributionLevelClasses[cell.level]}`}
+            key={cell.date ?? `missing-${index}`}
+            title={cell.date ?? undefined}
+          />
+        );
+      })}
     </div>
   );
 }
 
-function GitHubCard({ userAgent, onClick }: { userAgent: string | null; onClick?: () => void }) {
+function GitHubCard({
+  userAgent,
+  contributions,
+  onClick,
+}: {
+  userAgent: string | null;
+  contributions: GitHubContributions;
+  onClick?: () => void;
+}) {
   return (
     <GlassCard
       ariaLabel="Open GitHub profile"
@@ -274,7 +271,7 @@ function GitHubCard({ userAgent, onClick }: { userAgent: string | null; onClick?
           <Image alt="GitHub" className="size-12" height={55} src={figmaAssets.github} width={55} />
           <p className="whitespace-nowrap text-xl font-medium sm:text-2xl">@aomona</p>
         </div>
-        <ContributionGrid />
+        <ContributionGrid contributions={contributions} />
       </div>
     </GlassCard>
   );
@@ -518,12 +515,14 @@ export function SocialCards({
   track,
   colors,
   isLoading,
+  githubContributions,
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
   track: SpotifyTrack | null;
   colors: string[] | null;
   isLoading: boolean;
+  githubContributions: GitHubContributions;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const toastRef = useRef<HTMLDivElement>(null);
@@ -587,7 +586,11 @@ export function SocialCards({
         ref={gridRef}
         className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4"
       >
-        <GitHubCard userAgent={userAgent} onClick={() => openUrl(GITHUB_URL)} />
+        <GitHubCard
+          userAgent={userAgent}
+          contributions={githubContributions}
+          onClick={() => openUrl(GITHUB_URL)}
+        />
         <ServiceCard
           ariaLabel="Open Discord community"
           gradient={gradients.discord}
