@@ -1,0 +1,414 @@
+"use client";
+
+import { GrainGradient } from "grain-gradient/react";
+import { CloudRain, Umbrella } from "lucide-react";
+import Image from "next/image";
+import type { CSSProperties, ReactNode } from "react";
+import { figmaAssets } from "./assets";
+
+type CardGradient = {
+  baseColor: string;
+  colors: string[];
+  seed: number;
+  frequency?: number;
+  contrast?: number;
+  opacity?: number;
+  blendMode?: CSSProperties["mixBlendMode"];
+  saturation?: number;
+  blur?: number;
+};
+
+type CardProps = {
+  className?: string;
+  gradient: CardGradient;
+  overlay?: string;
+  children: ReactNode;
+  userAgent: string | null;
+};
+
+const cardBase =
+  "relative isolate overflow-hidden rounded-[34px] border border-black/15 p-4 shadow-[3px_4px_20px_-2px_rgba(0,0,0,0.25)] sm:p-6";
+
+const gradients = {
+  github: {
+    baseColor: "#0d0d0d",
+    colors: ["#050505", "#151515", "#3b3b3b", "#0a0a0a"],
+    seed: 11,
+    frequency: 0.82,
+    contrast: 1.28,
+    opacity: 0.24,
+    saturation: 0.78,
+  },
+  discord: {
+    baseColor: "#5865f2",
+    colors: ["#5865f2", "#7c3aed", "#3b82f6", "#a78bfa"],
+    seed: 23,
+    frequency: 0.72,
+    contrast: 1.24,
+    opacity: 0.2,
+  },
+  x: {
+    baseColor: "#101010",
+    colors: ["#050505", "#262626", "#4b4b4b", "#111111"],
+    seed: 31,
+    frequency: 0.84,
+    contrast: 1.3,
+    opacity: 0.23,
+    saturation: 0.75,
+  },
+  player: {
+    baseColor: "#132325",
+    colors: ["#1e3a3a", "#455a5d", "#0b1416", "#2f4242"],
+    seed: 43,
+    frequency: 0.7,
+    contrast: 1.22,
+    opacity: 0.2,
+    saturation: 0.82,
+  },
+  weather: {
+    baseColor: "#101010",
+    colors: ["#070707", "#242424", "#454545", "#101010"],
+    seed: 59,
+    frequency: 0.78,
+    contrast: 1.26,
+    opacity: 0.22,
+    saturation: 0.78,
+  },
+  nostr: {
+    baseColor: "#6d0bc5",
+    colors: ["#f000b8", "#7c3aed", "#2f1a87", "#c500d6"],
+    seed: 67,
+    frequency: 0.76,
+    contrast: 1.28,
+    opacity: 0.22,
+  },
+  osu: {
+    baseColor: "#c83f79",
+    colors: ["#ff6aa5", "#d9467c", "#9f2b5d", "#ffd1dc"],
+    seed: 71,
+    frequency: 0.74,
+    contrast: 1.24,
+    opacity: 0.22,
+  },
+  tetrio: {
+    baseColor: "#2d3ccf",
+    colors: ["#5747df", "#2637c7", "#7c3aed", "#38bdf8"],
+    seed: 83,
+    frequency: 0.74,
+    contrast: 1.25,
+    opacity: 0.21,
+  },
+  vrchat: {
+    baseColor: "#e9b293",
+    colors: ["#f4b08e", "#f7d7c6", "#cc8d75", "#ffffff"],
+    seed: 97,
+    frequency: 0.68,
+    contrast: 1.2,
+    opacity: 0.18,
+  },
+} satisfies Record<string, CardGradient>;
+
+const contributionCells = [
+  ["c01", "bg-white/15"],
+  ["c02", "bg-white/15"],
+  ["c03", "bg-[#0e4429]"],
+  ["c04", "bg-white/15"],
+  ["c05", "bg-white/15"],
+  ["c06", "bg-[#39d353]"],
+  ["c07", "bg-[#0e4429]"],
+  ["c08", "bg-[#006d32]"],
+  ["c09", "bg-white/15"],
+  ["c10", "bg-[#0e4429]"],
+  ["c11", "bg-white/15"],
+  ["c12", "bg-white/15"],
+  ["c13", "bg-white/15"],
+  ["c14", "bg-[#0e4429]"],
+  ["c15", "bg-[#0e4429]"],
+  ["c16", "bg-white/15"],
+  ["c17", "bg-white/15"],
+  ["c18", "bg-white/15"],
+  ["c19", "bg-white/15"],
+  ["c20", "bg-white/15"],
+  ["c21", "bg-white/15"],
+  ["c22", "bg-white/15"],
+  ["c23", "bg-white/15"],
+  ["c24", "bg-white/15"],
+  ["c25", "bg-[#0e4429]"],
+  ["c26", "bg-white/15"],
+  ["c27", "bg-white/15"],
+  ["c28", "bg-white/15"],
+  ["c29", "bg-white/15"],
+  ["c30", "bg-white/15"],
+  ["c31", "bg-white/15"],
+  ["c32", "bg-white/15"],
+  ["c33", "bg-white/15"],
+  ["c34", "bg-[#0e4429]"],
+  ["c35", "bg-white/15"],
+  ["c36", "bg-white/15"],
+  ["c37", "bg-[#006d32]"],
+  ["c38", "bg-white/15"],
+  ["c39", "bg-[#0e4429]"],
+  ["c40", "bg-[#006d32]"],
+  ["c41", "bg-white/15"],
+  ["c42", "bg-[#0e4429]"],
+  ["c43", "bg-white/15"],
+  ["c44", "bg-white/15"],
+  ["c45", "bg-white/15"],
+  ["c46", "bg-white/15"],
+  ["c47", "bg-[#26a641]"],
+  ["c48", "bg-[#0e4429]"],
+  ["c49", "bg-white/15"],
+];
+
+function GlassCard({
+  className = "",
+  gradient,
+  overlay = "bg-black/15",
+  children,
+  userAgent,
+}: CardProps) {
+  return (
+    <GrainGradient
+      {...gradient}
+      androidCanvasFallback="auto"
+      androidCanvasFallbackUserAgent={userAgent}
+      className={`${cardBase} ${className}`}
+      style={{ backgroundColor: gradient.baseColor }}
+    >
+      <div className={`absolute inset-0 ${overlay}`} />
+      <div className="relative z-10 h-full">{children}</div>
+    </GrainGradient>
+  );
+}
+
+function ServiceCard({
+  className = "",
+  gradient,
+  icon,
+  title,
+  subtitle,
+  userAgent,
+  iconClassName = "size-9",
+}: {
+  className?: string;
+  gradient: CardGradient;
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+  userAgent: string | null;
+  iconClassName?: string;
+}) {
+  return (
+    <GlassCard className={`aspect-square ${className}`} gradient={gradient} userAgent={userAgent}>
+      <div className="flex h-full flex-col justify-between">
+        <div className={iconClassName}>{icon}</div>
+        <div className="leading-normal text-white">
+          <p className="whitespace-nowrap text-xl font-medium sm:text-2xl">{title}</p>
+          {subtitle ? (
+            <p className="mt-1 whitespace-nowrap text-base font-light sm:text-xl">{subtitle}</p>
+          ) : null}
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function ContributionGrid() {
+  return (
+    <div className="grid aspect-square h-full max-h-38 grid-cols-7 grid-rows-7 gap-1.25">
+      {contributionCells.map(([id, cell]) => (
+        <div className={`rounded-md ${cell}`} key={id} />
+      ))}
+    </div>
+  );
+}
+
+function GitHubCard({ userAgent }: { userAgent: string | null }) {
+  return (
+    <GlassCard
+      className="col-span-2 aspect-2/1 md:aspect-auto"
+      gradient={gradients.github}
+      userAgent={userAgent}
+    >
+      <div className="flex h-full gap-3">
+        <div className="flex min-w-0 flex-1 flex-col justify-between">
+          <Image alt="GitHub" className="size-12" height={55} src={figmaAssets.github} width={55} />
+          <p className="whitespace-nowrap text-xl font-medium sm:text-2xl">@aomona</p>
+        </div>
+        <ContributionGrid />
+      </div>
+    </GlassCard>
+  );
+}
+
+function NowPlayingCard({ userAgent }: { userAgent: string | null }) {
+  return (
+    <GlassCard
+      className="col-span-2 aspect-2/1 md:aspect-auto"
+      gradient={gradients.player}
+      overlay="bg-black/50"
+      userAgent={userAgent}
+    >
+      <div className="flex h-full items-center gap-3">
+        <div className="relative aspect-square h-full shrink-0">
+          <Image
+            alt="Album artwork"
+            className="rounded-lg object-cover"
+            fill
+            sizes="183px"
+            src={figmaAssets.album}
+          />
+        </div>
+        <div className="flex h-full min-w-0 flex-1 flex-col justify-between">
+          <div className="flex items-start justify-between gap-3">
+            <p className="whitespace-nowrap text-base font-bold">Now Playing</p>
+            <Image
+              alt="Spotify"
+              className="size-9 sm:size-10"
+              height={42}
+              src={figmaAssets.spotify}
+              width={42}
+            />
+          </div>
+          <div>
+            <p className="whitespace-nowrap text-xl font-medium">raining</p>
+            <p className="whitespace-nowrap text-base font-light">ariilol</p>
+          </div>
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function WeatherCard({ userAgent }: { userAgent: string | null }) {
+  const days = ["Today", "TUE", "WED", "THU", "FRI", "SAT"];
+
+  return (
+    <GlassCard
+      className="col-span-2 aspect-2/1 md:aspect-auto"
+      gradient={gradients.weather}
+      overlay="bg-black/20"
+      userAgent={userAgent}
+    >
+      <div className="flex h-full flex-col gap-1.5 overflow-hidden sm:gap-2">
+        <div className="flex items-center gap-2">
+          <CloudRain
+            aria-hidden
+            className="size-8 shrink-0 text-white sm:size-9"
+            strokeWidth={2.2}
+          />
+          <div className="min-w-0 leading-normal">
+            <div className="flex gap-2 text-lg font-medium sm:text-xl">
+              <p>Rainy,</p>
+              <p>28°C</p>
+            </div>
+            <div className="flex gap-1 whitespace-nowrap text-[10px] font-light sm:text-xs">
+              <p>Mon,</p>
+              <p>15:00</p>
+              <p>/</p>
+              <p>Nagoya,</p>
+              <p>Japan</p>
+            </div>
+          </div>
+        </div>
+        <div className="grid min-h-0 flex-1 grid-cols-6">
+          {days.map((day) => (
+            <div
+              className="flex flex-col items-center justify-center gap-1.5 overflow-hidden"
+              key={day}
+            >
+              <p className="whitespace-nowrap text-[10px] font-light">{day}</p>
+              <Umbrella aria-hidden className="size-5 text-white sm:size-6" strokeWidth={2.2} />
+              <div className="text-center leading-tight">
+                <p className="text-xs">28°C</p>
+                <p className="text-[10px] font-light">10°C</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+function OsuIcon() {
+  return (
+    <div className="relative size-12">
+      <Image
+        alt=""
+        className="absolute inset-0 size-full"
+        height={55}
+        src={figmaAssets.osu}
+        width={55}
+      />
+    </div>
+  );
+}
+
+export function SocialCards({ userAgent }: { userAgent: string | null }) {
+  return (
+    <div className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4">
+      <GitHubCard userAgent={userAgent} />
+      <ServiceCard
+        gradient={gradients.discord}
+        icon={
+          <Image
+            alt="Discord"
+            className="size-full"
+            height={55}
+            src={figmaAssets.discord}
+            width={55}
+          />
+        }
+        title="community"
+        userAgent={userAgent}
+      />
+      <ServiceCard
+        gradient={gradients.x}
+        icon={<Image alt="X" className="size-full" height={55} src={figmaAssets.x} width={55} />}
+        title="@aomona_"
+        userAgent={userAgent}
+      />
+      <NowPlayingCard userAgent={userAgent} />
+      <WeatherCard userAgent={userAgent} />
+      <ServiceCard
+        gradient={gradients.nostr}
+        icon={
+          <Image alt="Nostr" className="size-full" height={55} src={figmaAssets.nostr} width={55} />
+        }
+        title="nostr"
+        userAgent={userAgent}
+      />
+      <ServiceCard
+        gradient={gradients.osu}
+        icon={<OsuIcon />}
+        title="@aomona"
+        subtitle="1,780pp"
+        userAgent={userAgent}
+      />
+      <ServiceCard
+        gradient={gradients.tetrio}
+        icon={
+          <Image
+            alt="TETR.IO"
+            className="size-full"
+            height={55}
+            src={figmaAssets.tetrio}
+            width={55}
+          />
+        }
+        title="@aomona"
+        subtitle="2,349.62TR"
+        userAgent={userAgent}
+      />
+      <ServiceCard
+        gradient={gradients.vrchat}
+        icon={
+          <Image alt="VRChat" className="w-18" height={35} src={figmaAssets.vrchat} width={70} />
+        }
+        title="あおもな"
+        userAgent={userAgent}
+      />
+    </div>
+  );
+}
