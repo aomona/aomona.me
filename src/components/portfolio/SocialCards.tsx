@@ -3,6 +3,8 @@
 import { type NagoyaWeather, type WeatherKind } from "@/lib/jmaWeather";
 import type { GitHubContributions } from "@/lib/githubContributions";
 import type { OsuProfile } from "@/lib/osuProfile";
+import type { TetrioProfile } from "@/lib/tetrioProfile";
+import { getTetrioDisplay } from "@/lib/tetrioProfile";
 import type { SpotifyTrack } from "@/lib/spotify";
 import { GrainGradient } from "grain-gradient/react";
 import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
@@ -522,6 +524,8 @@ export function SocialCards({
   isLoading,
   githubContributions,
   osuProfile,
+  tetrioProfile,
+
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
@@ -530,6 +534,7 @@ export function SocialCards({
   isLoading: boolean;
   githubContributions: GitHubContributions;
   osuProfile: OsuProfile;
+  tetrioProfile: TetrioProfile;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const toastRef = useRef<HTMLDivElement>(null);
@@ -673,7 +678,7 @@ export function SocialCards({
             />
           }
           title="@aomona"
-          subtitle="2,349.62TR"
+          subtitle={getTetrioDisplay(tetrioProfile)}
           userAgent={userAgent}
           onClick={() => openUrl(TETRIO_URL)}
         />

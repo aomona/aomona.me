@@ -4,14 +4,16 @@ import { PortfolioPage } from "@/components/portfolio/PortfolioPage";
 import { getGitHubContributions } from "@/lib/githubContributions";
 import { getNagoyaWeather } from "@/lib/jmaWeather";
 import { getOsuProfile } from "@/lib/osuProfile";
+import { getTetrioProfile } from "@/lib/tetrioProfile";
 import { headers } from "next/headers";
 
 export default async function Home() {
-  const [headersList, weather, githubContributions, osuProfile] = await Promise.all([
+  const [headersList, weather, githubContributions, osuProfile, tetrioProfile] = await Promise.all([
     headers(),
     getNagoyaWeather(),
     getGitHubContributions(),
     getOsuProfile(),
+    getTetrioProfile(),
   ]);
   const userAgent = headersList.get("user-agent");
 
@@ -21,6 +23,7 @@ export default async function Home() {
       weather={weather}
       githubContributions={githubContributions}
       osuProfile={osuProfile}
+      tetrioProfile={tetrioProfile}
     />
   );
 }

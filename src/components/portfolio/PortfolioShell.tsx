@@ -7,17 +7,20 @@ import { GrainGradient } from "grain-gradient/react";
 import type { NagoyaWeather } from "@/lib/jmaWeather";
 import type { GitHubContributions } from "@/lib/githubContributions";
 import type { OsuProfile } from "@/lib/osuProfile";
+import type { TetrioProfile } from "@/lib/tetrioProfile";
 
 export function PortfolioShell({
   userAgent,
   weather,
   githubContributions,
   osuProfile,
+  tetrioProfile,
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
   githubContributions: GitHubContributions;
   osuProfile: OsuProfile;
+  tetrioProfile: TetrioProfile;
 }) {
   const { track, colors, isLoading } = useNowPlaying(30000);
 
@@ -48,6 +51,7 @@ export function PortfolioShell({
               weather={weather}
               githubContributions={githubContributions}
               osuProfile={osuProfile}
+              tetrioProfile={tetrioProfile}
               track={track}
               colors={colors}
               isLoading={isLoading}
