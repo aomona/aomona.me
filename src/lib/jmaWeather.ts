@@ -89,7 +89,7 @@ type ForecastReport = {
   reportDatetime?: string;
   timeSeries?: ForecastTimeSeries[];
 };
-const unavailableNagoyaWeather: NagoyaWeather = {
+export const unavailableNagoyaWeather: NagoyaWeather = {
   current: null,
   forecastReportedAt: null,
   sourceLabel: "JMA AMeDAS",
@@ -99,7 +99,8 @@ const unavailableNagoyaWeather: NagoyaWeather = {
 export async function getNagoyaWeather(): Promise<NagoyaWeather> {
   try {
     return await fetchNagoyaWeather();
-  } catch {
+  } catch (e) {
+    console.error("JMA fetch failed:", e);
     return unavailableNagoyaWeather;
   }
 }
@@ -111,16 +112,15 @@ async function fetchNagoyaWeather(): Promise<NagoyaWeather> {
   );
 
   const latestTime = await fetchLatestAmedasTime();
-  const [amedasPoint, forecast] = await Promise.all([
+  const [amedasMap, forecast] = await Promise.all([
     fetchJmaJson<Record<string, AmedasObservation>>(
-      `${JMA_BASE_URL}/amedas/data/point/${AMEDAS_STATION_CODE}/${toAmedasPointTimestamp(latestTime)}.json`,
+      `${JMA_BASE_URL}/amedas/data/map/${toAmedasMapTimestamp(latestTime)}.json`,
       60,
     ),
     forecastPromise,
   ]);
 
-  const observation =
-    findLatestObservation(amedasPoint) ?? amedasPoint[toAmedasMapTimestamp(latestTime)];
+  const observation = amedasMap[AMEDAS_STATION_CODE];
   const currentForecast = getCurrentForecast(forecast);
   const current = observation
     ? buildCurrentWeather(observation, latestTime, currentForecast)
