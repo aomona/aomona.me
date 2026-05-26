@@ -525,7 +525,6 @@ export function SocialCards({
   githubContributions,
   osuProfile,
   tetrioProfile,
-
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
