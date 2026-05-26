@@ -1,9 +1,28 @@
+"use client";
+
 import Image from "next/image";
+import { useLayoutEffect, useRef } from "react";
+import gsap from "gsap";
 import { figmaAssets } from "./assets";
 
 export function HeroIntro() {
+  const ref = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const els = ref.current.children;
+    gsap.set(els, { y: 24, opacity: 0 });
+    gsap.to(els, {
+      y: 0,
+      opacity: 1,
+      duration: 0.55,
+      stagger: 0.06,
+      ease: "power2.out",
+    });
+  }, []);
+
   return (
-    <section className="flex h-full min-w-0 flex-1 flex-col justify-center gap-6 text-white">
+    <section ref={ref} className="flex h-full min-w-0 flex-1 flex-col justify-center gap-6 text-white">
       <div className="flex flex-col items-start gap-6">
         <Image
           alt="AOMONA avatar"
