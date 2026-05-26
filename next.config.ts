@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
         pathname: "/image/**",
       },
       {
+        protocol: "https",
+        hostname: "github.com",
+        pathname: "/aomona.png",
+      },
+      {
         protocol: "http",
         hostname: "localhost",
         port: "3845",

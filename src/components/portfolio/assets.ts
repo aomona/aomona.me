@@ -1,5 +1,5 @@
 export const figmaAssets = {
-  avatar: "http://localhost:3845/assets/2b271ea538b464f37000a7134e5526d5ea0e8254.png",
+  avatar: "https://github.com/aomona.png",
   album: "/album-fallback.svg",
   spotify: "/logo/Spotify_Primary_Logo_RGB_White.png",
   github: "/logo/GitHub_Invertocat_White.svg",
