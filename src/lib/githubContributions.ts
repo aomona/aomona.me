@@ -1,6 +1,45 @@
-const GITHUB_CONTRIBUTIONS_URL = "https://github.com/users/aomona/contributions";
+const GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
+const GITHUB_LOGIN = "aomona";
 const CONTRIBUTION_CELL_COUNT = 49;
-const CONTRIBUTION_DAY_COUNT = 7;
+
+const COLOR_TO_LEVEL: Record<string, GitHubContributionCell["level"]> = {
+  // Light mode
+  "#ebedf0": 0,
+  "#9be9a8": 1,
+  "#40c463": 2,
+  "#30a14e": 3,
+  "#216e39": 4,
+  // Dark mode
+  "#2d333b": 0,
+  "#0e4429": 1,
+  "#006d32": 2,
+  "#26a641": 3,
+  "#39d353": 4,
+};
+
+function colorToLevel(color: string): GitHubContributionCell["level"] {
+  const known = COLOR_TO_LEVEL[color.toLowerCase()];
+  if (known !== undefined) return known;
+
+  // Fallback: green intensity → level
+  const hex = color.replace("#", "");
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+
+  // Gray-ish (low saturation) → level 0
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const saturation = max === 0 ? 0 : (max - min) / max;
+  if (saturation < 0.15) return 0;
+
+  // Green dominance: brighter green = higher level
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  if (luminance > 170) return 4;
+  if (luminance > 130) return 3;
+  if (luminance > 90) return 2;
+  return 1;
+}
 
 export type GitHubContributionCell = {
   date: string | null;
@@ -12,28 +51,6 @@ export type GitHubContributions = {
   total: number | null;
 };
 
-type ParsedContributionCell = {
-  date: string;
-  day: number;
-  level: GitHubContributionCell["level"];
-  week: number;
-};
-
-const cellPattern =
-  /id="contribution-day-component-(\d)-(\d+)"[^>]*data-level="([0-4])"[^>]*data-date="(\d{4}-\d{2}-\d{2})"|data-date="(\d{4}-\d{2}-\d{2})"[^>]*id="contribution-day-component-(\d)-(\d+)"[^>]*data-level="([0-4])"/g;
-const totalPattern = /<h2[^>]*>\s*([\d,]+)\s*contributions/;
-
-function addDaysToDateKey(dateKey: string, days: number): string {
-  const date = new Date(`${dateKey}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-
-  const year = date.getUTCFullYear();
-  const month = `${date.getUTCMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getUTCDate()}`.padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
 export const unavailableGitHubContributions: GitHubContributions = {
   cells: Array.from({ length: CONTRIBUTION_CELL_COUNT }, () => ({
     date: null,
@@ -43,83 +60,87 @@ export const unavailableGitHubContributions: GitHubContributions = {
 };
 
 export async function getGitHubContributions(): Promise<GitHubContributions> {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    console.error("Missing GITHUB_TOKEN environment variable");
+    return unavailableGitHubContributions;
+  }
+
   try {
-    const response = await fetch(GITHUB_CONTRIBUTIONS_URL, {
-      headers: { Accept: "text/html" },
+    const response = await fetch(GITHUB_GRAPHQL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        query: `
+          query($login: String!) {
+            user(login: $login) {
+              contributionsCollection {
+                contributionCalendar {
+                  totalContributions
+                  weeks {
+                    contributionDays {
+                      date
+                      color
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `,
+        variables: { login: GITHUB_LOGIN },
+      }),
       next: { revalidate: 3600 },
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub contributions failed: ${response.status}`);
+      throw new Error(`GitHub API failed: ${response.status}`);
     }
 
-    return parseGitHubContributions(await response.text());
+    const data = await response.json();
+    if (data.errors?.length) {
+      throw new Error(`GitHub GraphQL errors: ${JSON.stringify(data.errors)}`);
+    }
+
+    const calendar = data.data?.user?.contributionsCollection?.contributionCalendar;
+    if (!calendar?.weeks) {
+      throw new Error("Missing contributionCalendar data");
+    }
+
+    return parseContributionCalendar(calendar);
   } catch (error) {
     console.error("GitHub contributions fetch failed:", error);
     return unavailableGitHubContributions;
   }
 }
 
-export function parseGitHubContributions(html: string): GitHubContributions {
-  const parsedCells: ParsedContributionCell[] = [];
+type ContributionCalendar = {
+  totalContributions: number;
+  weeks: { contributionDays: { date: string; color: string }[] }[];
+};
 
-  for (const match of html.matchAll(cellPattern)) {
-    const day = Number(match[1] ?? match[6]);
-    const week = Number(match[2] ?? match[7]);
-    const level = Number(match[3] ?? match[8]) as GitHubContributionCell["level"];
-    const date = match[4] ?? match[5];
-
-    if (
-      Number.isInteger(day) &&
-      day >= 0 &&
-      day < CONTRIBUTION_DAY_COUNT &&
-      Number.isInteger(week) &&
-      date
-    ) {
-      parsedCells.push({ date, day, level, week });
-    }
-  }
-
-  if (parsedCells.length === 0) {
-    return unavailableGitHubContributions;
-  }
-
-  const maxWeek = parsedCells.reduce((max, cell) => Math.max(max, cell.week), 0);
-  const firstWeek = Math.max(0, maxWeek - CONTRIBUTION_DAY_COUNT + 1);
-  const firstVisibleCell = parsedCells.find((cell) => cell.week === firstWeek && cell.day === 0);
-  const firstVisibleDate = firstVisibleCell
-    ? firstVisibleCell.date
-    : addDaysToDateKey(
-        parsedCells[0].date,
-        (firstWeek - parsedCells[0].week) * CONTRIBUTION_DAY_COUNT - parsedCells[0].day,
-      );
-
-  const byPosition = new Map<string, ParsedContributionCell>();
-
-  for (const cell of parsedCells) {
-    byPosition.set(`${cell.week}:${cell.day}`, cell);
-  }
+function parseContributionCalendar(calendar: ContributionCalendar): GitHubContributions {
+  const visibleWeeks = calendar.weeks.slice(-7);
 
   const cells: GitHubContributionCell[] = [];
-  for (let week = firstWeek; week <= maxWeek; week += 1) {
-    for (let day = 0; day < CONTRIBUTION_DAY_COUNT; day += 1) {
-      const cell = byPosition.get(`${week}:${day}`);
-      cells.push(
-        cell
-          ? { date: cell.date, level: cell.level }
-          : {
-              date: addDaysToDateKey(
-                firstVisibleDate,
-                (week - firstWeek) * CONTRIBUTION_DAY_COUNT + day,
-              ),
-              level: 0,
-            },
-      );
+  for (const week of visibleWeeks) {
+    for (const day of week.contributionDays) {
+      cells.push({
+        date: day.date,
+        level: colorToLevel(day.color),
+      });
     }
   }
 
-  const totalMatch = totalPattern.exec(html);
-  const total = totalMatch ? Number(totalMatch[1].replaceAll(",", "")) : null;
+  while (cells.length < CONTRIBUTION_CELL_COUNT) {
+    cells.push({ date: null, level: 0 });
+  }
 
-  return { cells, total: Number.isFinite(total) ? total : null };
+  return {
+    cells: cells.slice(0, CONTRIBUTION_CELL_COUNT),
+    total: calendar.totalContributions,
+  };
 }

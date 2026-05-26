@@ -2,6 +2,7 @@
 
 import { type NagoyaWeather, type WeatherKind } from "@/lib/jmaWeather";
 import type { GitHubContributions } from "@/lib/githubContributions";
+import type { OsuProfile } from "@/lib/osuProfile";
 import type { SpotifyTrack } from "@/lib/spotify";
 import { GrainGradient } from "grain-gradient/react";
 import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
@@ -148,6 +149,10 @@ const X_URL = "https://x.com/aomona_";
 const OSU_URL = "https://osu.ppy.sh/users/16801089";
 const TETRIO_URL = "https://ch.tetr.io/u/aomona";
 const VRCHAT_URL = "https://vrchat.com/home/user/usr_d899b13d-3e10-4fd6-a099-e5de87043547";
+
+function formatOsuPp(pp: number | null) {
+  return pp === null ? "pp unavailable" : `${Math.round(pp).toLocaleString("en-US")}pp`;
+}
 
 function GlassCard({
   className = "",
@@ -516,6 +521,7 @@ export function SocialCards({
   colors,
   isLoading,
   githubContributions,
+  osuProfile,
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
@@ -523,6 +529,7 @@ export function SocialCards({
   colors: string[] | null;
   isLoading: boolean;
   githubContributions: GitHubContributions;
+  osuProfile: OsuProfile;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const toastRef = useRef<HTMLDivElement>(null);
@@ -649,7 +656,7 @@ export function SocialCards({
           gradient={gradients.osu}
           icon={<OsuIcon />}
           title="@aomona"
-          subtitle="1,780pp"
+          subtitle={formatOsuPp(osuProfile.pp)}
           userAgent={userAgent}
           onClick={() => openUrl(OSU_URL)}
         />

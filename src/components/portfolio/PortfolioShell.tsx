@@ -6,15 +6,18 @@ import { SocialCards } from "./SocialCards";
 import { GrainGradient } from "grain-gradient/react";
 import type { NagoyaWeather } from "@/lib/jmaWeather";
 import type { GitHubContributions } from "@/lib/githubContributions";
+import type { OsuProfile } from "@/lib/osuProfile";
 
 export function PortfolioShell({
   userAgent,
   weather,
   githubContributions,
+  osuProfile,
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
   githubContributions: GitHubContributions;
+  osuProfile: OsuProfile;
 }) {
   const { track, colors, isLoading } = useNowPlaying(30000);
 
@@ -44,6 +47,7 @@ export function PortfolioShell({
               userAgent={userAgent}
               weather={weather}
               githubContributions={githubContributions}
+              osuProfile={osuProfile}
               track={track}
               colors={colors}
               isLoading={isLoading}
