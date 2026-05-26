@@ -25,6 +25,7 @@ type CardProps = {
   overlay?: string;
   children: ReactNode;
   userAgent: string | null;
+  onClick?: () => void;
 };
 
 const cardBase =
@@ -167,17 +168,26 @@ function GlassCard({
   overlay = "bg-black/15",
   children,
   userAgent,
+  onClick,
 }: CardProps) {
   return (
     <GrainGradient
       {...gradient}
       androidCanvasFallback="auto"
       androidCanvasFallbackUserAgent={userAgent}
-      className={`${cardBase} ${className}`}
+      className={`${cardBase} ${className} ${onClick ? "cursor-pointer" : ""}`}
       style={{ backgroundColor: gradient.baseColor }}
     >
       <div className={`absolute inset-0 ${overlay}`} />
       <div className="relative z-10 h-full">{children}</div>
+      {onClick ? (
+        <div
+          className="absolute inset-0 z-20"
+          onClick={onClick}
+          role="button"
+          tabIndex={0}
+        />
+      ) : null}
     </GrainGradient>
   );
 }
