@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ["aomonamacbookpro.tail7a84e3.ts.net"],
   reactCompiler: true,
   images: {
     unoptimized: true,

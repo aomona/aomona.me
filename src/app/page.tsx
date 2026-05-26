@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { PortfolioPage } from "@/components/portfolio/PortfolioPage";
 import { getNagoyaWeather } from "@/lib/jmaWeather";
 import { headers } from "next/headers";
