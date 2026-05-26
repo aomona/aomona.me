@@ -159,26 +159,8 @@ async function fetchJmaJson<T>(url: string, revalidate: number): Promise<T> {
   return (await response.json()) as T;
 }
 
-function toAmedasPointTimestamp(latestTime: string): string {
-  return `${latestTime.slice(0, 4)}${latestTime.slice(5, 7)}${latestTime.slice(8, 10)}_${latestTime.slice(11, 13)}`;
-}
-
 function toAmedasMapTimestamp(latestTime: string): string {
   return `${latestTime.slice(0, 4)}${latestTime.slice(5, 7)}${latestTime.slice(8, 10)}${latestTime.slice(11, 13)}${latestTime.slice(14, 16)}00`;
-}
-
-function findLatestObservation(
-  pointData: Record<string, AmedasObservation>,
-): AmedasObservation | undefined {
-  let latestKey = "";
-
-  for (const key of Object.keys(pointData)) {
-    if (key > latestKey) {
-      latestKey = key;
-    }
-  }
-
-  return latestKey ? pointData[latestKey] : undefined;
 }
 
 function buildCurrentWeather(

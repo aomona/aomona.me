@@ -1,6 +1,7 @@
 "use client";
 
 import { type NagoyaWeather, type WeatherKind } from "@/lib/jmaWeather";
+import type { SpotifyTrack } from "@/lib/spotify";
 import { GrainGradient } from "grain-gradient/react";
 import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
 import Image from "next/image";
@@ -27,6 +28,7 @@ type CardProps = {
   children: ReactNode;
   userAgent: string | null;
   onClick?: () => void;
+  ariaLabel?: string;
 };
 
 const cardBase =
@@ -102,12 +104,13 @@ const gradients = {
     opacity: 0.21,
   },
   vrchat: {
-    baseColor: "#e9b293",
-    colors: ["#f4b08e", "#f7d7c6", "#cc8d75", "#ffffff"],
+    baseColor: "#d97706",
+    colors: ["#f59e0b", "#facc15", "#b45309", "#fef3c7"],
     seed: 97,
     frequency: 0.68,
-    contrast: 1.2,
-    opacity: 0.18,
+    contrast: 1.18,
+    opacity: 0.22,
+    saturation: 1.02,
   },
 } satisfies Record<string, CardGradient>;
 
@@ -165,15 +168,15 @@ const contributionCells = [
 
 const NOSTR_NPROFILE =
   "nprofile1qyxhwumn8ghj77tpvf6jumt9qys8wumn8ghj7un9d3shjtt2wqhxummnw3ezuamfwfjkgmn9wshx5uqqyqs52zttyq3sw9x5jej5sx6l2mltl8tmf295fzahpyeupknl0an2sawteyx";
-const SPOTIFY_TRACK_URL = "https://open.spotify.com/track/1NGDRoqywxoyMRNrCV4g1L";
-const WEATHER_SEARCH_URL =
-  "https://www.google.com/search?q=Nagoya+weather";
+const WEATHER_SEARCH_URL = "https://www.google.com/search?q=Nagoya+weather";
+const SPOTIFY_URL = "https://open.spotify.com/";
 const GITHUB_URL = "https://github.com/aomona";
 const DISCORD_URL = "https://discord.gg/4pBwnYEtJW";
 const X_URL = "https://x.com/aomona_";
 const OSU_URL = "https://osu.ppy.sh/users/16801089";
 const TETRIO_URL = "https://ch.tetr.io/u/aomona";
 const VRCHAT_URL = "https://vrchat.com/home/user/usr_d899b13d-3e10-4fd6-a099-e5de87043547";
+
 function GlassCard({
   className = "",
   gradient,
@@ -181,6 +184,7 @@ function GlassCard({
   children,
   userAgent,
   onClick,
+  ariaLabel,
 }: CardProps) {
   return (
     <GrainGradient
@@ -193,11 +197,11 @@ function GlassCard({
       <div className={`absolute inset-0 ${overlay}`} />
       <div className="relative z-10 h-full">{children}</div>
       {onClick ? (
-        <div
-          className="absolute inset-0 z-20"
+        <button
+          aria-label={ariaLabel}
+          className="absolute inset-0 z-20 cursor-pointer appearance-none border-0 bg-transparent p-0 focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:outline-none"
           onClick={onClick}
-          role="button"
-          tabIndex={0}
+          type="button"
         />
       ) : null}
     </GrainGradient>
@@ -213,6 +217,7 @@ function ServiceCard({
   userAgent,
   iconClassName = "size-9",
   onClick,
+  ariaLabel,
 }: {
   className?: string;
   gradient: CardGradient;
@@ -222,9 +227,16 @@ function ServiceCard({
   userAgent: string | null;
   iconClassName?: string;
   onClick?: () => void;
+  ariaLabel?: string;
 }) {
   return (
-    <GlassCard className={`aspect-square ${className}`} gradient={gradient} userAgent={userAgent} onClick={onClick}>
+    <GlassCard
+      ariaLabel={ariaLabel}
+      className={`aspect-square ${className}`}
+      gradient={gradient}
+      userAgent={userAgent}
+      onClick={onClick}
+    >
       <div className="flex h-full flex-col justify-between">
         <div className={iconClassName}>{icon}</div>
         <div className="leading-normal text-white">
@@ -251,6 +263,7 @@ function ContributionGrid() {
 function GitHubCard({ userAgent, onClick }: { userAgent: string | null; onClick?: () => void }) {
   return (
     <GlassCard
+      ariaLabel="Open GitHub profile"
       className="col-span-2 aspect-2/1 md:aspect-auto"
       gradient={gradients.github}
       userAgent={userAgent}
@@ -267,35 +280,84 @@ function GitHubCard({ userAgent, onClick }: { userAgent: string | null; onClick?
   );
 }
 
+function darkenColor(hex: string, factor = 0.52) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
+
+  const r = Math.round(Number.parseInt(hex.slice(1, 3), 16) * factor);
+  const g = Math.round(Number.parseInt(hex.slice(3, 5), 16) * factor);
+  const b = Math.round(Number.parseInt(hex.slice(5, 7), 16) * factor);
+
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+function LoadingAlbumArt() {
+  return (
+    <div className="relative size-full overflow-hidden rounded-lg bg-white/10">
+      <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.34),transparent_34%),linear-gradient(135deg,rgba(30,215,96,0.28),rgba(255,255,255,0.06)_42%,rgba(0,0,0,0.2))]" />
+      <div className="absolute inset-4 rounded-full border border-white/15" />
+      <div className="absolute inset-9 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+      <div className="absolute inset-1/2 size-3 -translate-1/2 rounded-full bg-white/70" />
+    </div>
+  );
+}
 
 function NowPlayingCard({
   userAgent,
+  track,
+  colors,
+  isLoading,
   onClick,
 }: {
   userAgent: string | null;
+  track: SpotifyTrack | null;
+  colors: string[] | null;
+  isLoading: boolean;
   onClick?: () => void;
 }) {
+  const isPlaying = track?.isPlaying ?? false;
+  const label = isLoading
+    ? "Loading"
+    : track
+      ? isPlaying
+        ? "Now Playing"
+        : "Last Played"
+      : "Spotify";
+  const title = isLoading ? "Loading Spotify" : (track?.title ?? "Not playing");
+  const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
+  const artUrl = track?.albumArtUrl ?? figmaAssets.album;
+
+  const playerColors = colors?.length
+    ? colors.slice(0, 4).map((color) => darkenColor(color))
+    : null;
+  const playerGradient: CardGradient = playerColors
+    ? { ...gradients.player, baseColor: playerColors[0], colors: playerColors }
+    : gradients.player;
+
   return (
     <GlassCard
       className="col-span-2 aspect-2/1 md:aspect-auto"
-      gradient={gradients.player}
+      gradient={playerGradient}
       overlay="bg-black/50"
       userAgent={userAgent}
       onClick={onClick}
+      ariaLabel={track ? `Open Spotify track: ${title} by ${artist}` : "Open Spotify"}
     >
       <div className="flex h-full items-center gap-3">
         <div className="relative aspect-square h-full shrink-0">
-          <Image
-            alt="Album artwork"
-            className="rounded-lg object-cover"
-            fill
-            sizes="183px"
-            src={figmaAssets.album}
-          />
+          {isLoading ? (
+            <LoadingAlbumArt />
+          ) : (
+            <Image
+              alt={track ? `${track.album} album art` : "Album artwork unavailable"}
+              className="rounded-lg object-cover"
+              fill
+              sizes="183px"
+              src={artUrl}
+            />
+          )}
         </div>
         <div className="flex h-full min-w-0 flex-1 flex-col justify-between">
           <div className="flex items-start justify-between gap-3">
-            <p className="whitespace-nowrap text-base font-bold">Now Playing</p>
+            <p className="whitespace-nowrap text-base font-bold">{label}</p>
             <Image
               alt="Spotify"
               className="size-9 sm:size-10"
@@ -305,8 +367,8 @@ function NowPlayingCard({
             />
           </div>
           <div>
-            <p className="whitespace-nowrap text-xl font-medium">raining</p>
-            <p className="whitespace-nowrap text-base font-light">ariilol</p>
+            <p className="truncate text-xl font-medium">{title}</p>
+            <p className="truncate text-base font-light">{artist}</p>
           </div>
         </div>
       </div>
@@ -378,6 +440,7 @@ function WeatherCard({
       overlay="bg-black/20"
       userAgent={userAgent}
       onClick={onClick}
+      ariaLabel="Open Nagoya weather search"
     >
       <div className="flex h-full flex-col gap-1.5 overflow-hidden sm:gap-2">
         <div className="flex items-center gap-2">
@@ -452,12 +515,18 @@ function openUrl(url: string) {
 export function SocialCards({
   userAgent,
   weather,
+  track,
+  colors,
+  isLoading,
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
+  track: SpotifyTrack | null;
+  colors: string[] | null;
+  isLoading: boolean;
 }) {
-  const toastRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const toastRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTlRef = useRef<gsap.core.Timeline | null>(null);
 
@@ -514,9 +583,13 @@ export function SocialCards({
 
   return (
     <>
-      <div ref={gridRef} className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4">
+      <div
+        ref={gridRef}
+        className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4"
+      >
         <GitHubCard userAgent={userAgent} onClick={() => openUrl(GITHUB_URL)} />
         <ServiceCard
+          ariaLabel="Open Discord community"
           gradient={gradients.discord}
           icon={
             <Image
@@ -532,6 +605,7 @@ export function SocialCards({
           onClick={() => openUrl(DISCORD_URL)}
         />
         <ServiceCard
+          ariaLabel="Open X profile"
           gradient={gradients.x}
           icon={<Image alt="X" className="size-full" height={55} src={figmaAssets.x} width={55} />}
           title="@aomona_"
@@ -540,7 +614,10 @@ export function SocialCards({
         />
         <NowPlayingCard
           userAgent={userAgent}
-          onClick={() => openUrl(SPOTIFY_TRACK_URL)}
+          track={track}
+          colors={colors}
+          isLoading={isLoading}
+          onClick={() => openUrl(track?.trackUrl ?? SPOTIFY_URL)}
         />
         <WeatherCard
           userAgent={userAgent}
@@ -548,9 +625,16 @@ export function SocialCards({
           onClick={() => openUrl(WEATHER_SEARCH_URL)}
         />
         <ServiceCard
+          ariaLabel="Copy Nostr profile"
           gradient={gradients.nostr}
           icon={
-            <Image alt="Nostr" className="size-full" height={55} src={figmaAssets.nostr} width={55} />
+            <Image
+              alt="Nostr"
+              className="size-full"
+              height={55}
+              src={figmaAssets.nostr}
+              width={55}
+            />
           }
           iconClassName="size-10"
           title="nostr"
@@ -558,6 +642,7 @@ export function SocialCards({
           onClick={() => copyToClipboard(NOSTR_NPROFILE, () => showToast("nprofile copied!"))}
         />
         <ServiceCard
+          ariaLabel="Open osu! profile"
           gradient={gradients.osu}
           icon={<OsuIcon />}
           title="@aomona"
@@ -566,6 +651,7 @@ export function SocialCards({
           onClick={() => openUrl(OSU_URL)}
         />
         <ServiceCard
+          ariaLabel="Open TETR.IO profile"
           gradient={gradients.tetrio}
           icon={
             <Image
@@ -582,6 +668,7 @@ export function SocialCards({
           onClick={() => openUrl(TETRIO_URL)}
         />
         <ServiceCard
+          ariaLabel="Open VRChat profile"
           gradient={gradients.vrchat}
           icon={
             <Image alt="VRChat" className="w-20" height={40} src={figmaAssets.vrchat} width={80} />

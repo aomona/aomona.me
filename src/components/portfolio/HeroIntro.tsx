@@ -22,7 +22,10 @@ export function HeroIntro() {
   }, []);
 
   return (
-    <section ref={ref} className="flex h-full min-w-0 flex-1 flex-col justify-center gap-6 text-white">
+    <section
+      ref={ref}
+      className="flex h-full min-w-0 flex-1 flex-col justify-center gap-6 text-white"
+    >
       <div className="flex flex-col items-start gap-6">
         <Image
           alt="AOMONA avatar"
