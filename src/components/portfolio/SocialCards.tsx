@@ -162,6 +162,8 @@ const contributionCells = [
   ["c49", "bg-white/15"],
 ];
 
+const NOSTR_NPROFILE =
+  "nprofile1qyxhwumn8ghj77tpvf6jumt9qys8wumn8ghj7un9d3shjtt2wqhxummnw3ezuamfwfjkgmn9wshx5uqqyqs52zttyq3sw9x5jej5sx6l2mltl8tmf295fzahpyeupknl0an2sawteyx";
 const SPOTIFY_TRACK_URL = "https://open.spotify.com/track/1NGDRoqywxoyMRNrCV4g1L";
 const WEATHER_SEARCH_URL =
   "https://www.google.com/search?q=Nagoya+weather";
@@ -438,6 +440,10 @@ function OsuIcon() {
   );
 }
 
+function copyToClipboard(text: string) {
+  void navigator.clipboard.writeText(text);
+}
+
 function openUrl(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
@@ -491,6 +497,7 @@ export function SocialCards({
         iconClassName="size-10"
         title="nostr"
         userAgent={userAgent}
+        onClick={() => copyToClipboard(NOSTR_NPROFILE)}
       />
       <ServiceCard
         gradient={gradients.osu}
