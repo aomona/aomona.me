@@ -282,7 +282,7 @@ function GitHubCard({
   );
 }
 
-function darkenColor(hex: string, factor = 0.52) {
+function darkenColor(hex: string, factor = 0.9) {
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
 
   const r = Math.round(Number.parseInt(hex.slice(1, 3), 16) * factor);
