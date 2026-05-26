@@ -1,7 +1,8 @@
 "use client";
 
+import type { NagoyaWeather, WeatherKind } from "@/lib/jmaWeather";
 import { GrainGradient } from "grain-gradient/react";
-import { CloudRain, Umbrella } from "lucide-react";
+import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
 import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 import { figmaAssets } from "./assets";
@@ -280,8 +281,54 @@ function NowPlayingCard({ userAgent }: { userAgent: string | null }) {
   );
 }
 
-function WeatherCard({ userAgent }: { userAgent: string | null }) {
-  const days = ["Today", "TUE", "WED", "THU", "FRI", "SAT"];
+function WeatherIcon({ className, kind }: { className: string; kind: WeatherKind }) {
+  switch (kind) {
+    case "cloudy":
+      return <CloudSun aria-hidden className={className} strokeWidth={2.2} />;
+    case "rainy":
+      return <CloudRain aria-hidden className={className} strokeWidth={2.2} />;
+    case "snowy":
+      return <Snowflake aria-hidden className={className} strokeWidth={2.2} />;
+    default:
+      return <Sun aria-hidden className={className} strokeWidth={2.2} />;
+  }
+}
+
+function formatTemp(value: number | null) {
+  if (value === null) {
+    return "—°C";
+  }
+
+  return `${Math.round(value)}°C`;
+}
+
+function formatCurrentTemp(value: number | null) {
+  if (value === null) {
+    return "—°C";
+  }
+
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}°C`;
+}
+
+function WeatherCard({ userAgent, weather }: { userAgent: string | null; weather: NagoyaWeather }) {
+  const current = weather.current;
+  const observedDate = current?.observedAt.slice(0, 10);
+  const needsToday = Boolean(observedDate) && weather.weekly[0]?.date !== observedDate;
+  const forecastDays = needsToday
+    ? [
+        {
+          date: observedDate!,
+          highC: current?.highC ?? current?.temperatureC ?? null,
+          kind: current?.kind ?? "sunny",
+          label: "Today",
+          lowC: current?.lowC ?? current?.temperatureC ?? null,
+        },
+        ...weather.weekly.slice(0, 5),
+      ]
+    : weather.weekly.slice(0, 6).map((day, index) => ({
+        ...day,
+        label: index === 0 ? "Today" : day.label,
+      }));
 
   return (
     <GlassCard
@@ -292,40 +339,47 @@ function WeatherCard({ userAgent }: { userAgent: string | null }) {
     >
       <div className="flex h-full flex-col gap-1.5 overflow-hidden sm:gap-2">
         <div className="flex items-center gap-2">
-          <CloudRain
-            aria-hidden
-            className="size-8 shrink-0 text-white sm:size-9"
-            strokeWidth={2.2}
-          />
+          {current ? (
+            <WeatherIcon className="size-8 shrink-0 text-white sm:size-9" kind={current.kind} />
+          ) : (
+            <Cloud aria-hidden className="size-8 shrink-0 text-white sm:size-9" strokeWidth={2.2} />
+          )}
           <div className="min-w-0 leading-normal">
-            <div className="flex gap-2 text-lg font-medium sm:text-xl">
-              <p>Rainy,</p>
-              <p>28°C</p>
+            <div className="flex min-w-0 gap-2 text-lg font-medium sm:text-xl">
+              <p className="truncate">{current?.condition ?? "JMA unavailable"},</p>
+              <p className="shrink-0">{formatCurrentTemp(current?.temperatureC ?? null)}</p>
             </div>
             <div className="flex gap-1 whitespace-nowrap text-[10px] font-light sm:text-xs">
-              <p>Mon,</p>
-              <p>15:00</p>
+              <p>{current?.observedDayLabel ?? "—"},</p>
+              <p>{current?.observedTimeLabel ?? "—"}</p>
               <p>/</p>
-              <p>Nagoya,</p>
-              <p>Japan</p>
+              <p>Nagoya, Japan</p>
             </div>
           </div>
         </div>
-        <div className="grid min-h-0 flex-1 grid-cols-6">
-          {days.map((day) => (
-            <div
-              className="flex flex-col items-center justify-center gap-1.5 overflow-hidden"
-              key={day}
-            >
-              <p className="whitespace-nowrap text-[10px] font-light">{day}</p>
-              <Umbrella aria-hidden className="size-5 text-white sm:size-6" strokeWidth={2.2} />
-              <div className="text-center leading-tight">
-                <p className="text-xs">28°C</p>
-                <p className="text-[10px] font-light">10°C</p>
+        {forecastDays.length > 0 ? (
+          <div className="grid min-h-0 flex-1 grid-cols-6">
+            {forecastDays.map((day) => (
+              <div
+                className="flex flex-col items-center justify-center gap-1 overflow-hidden"
+                key={day.date}
+              >
+                <p className="whitespace-nowrap text-[9px] font-light sm:text-[10px]">
+                  {day.label}
+                </p>
+                <WeatherIcon className="size-4.5 text-white sm:size-5" kind={day.kind} />
+                <div className="text-center leading-tight">
+                  <p className="text-[11px]">{formatTemp(day.highC)}</p>
+                  <p className="text-[9px] font-light">{formatTemp(day.lowC)}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center text-xs font-light text-white/80">
+            JMA weekly forecast unavailable.
+          </div>
+        )}
       </div>
     </GlassCard>
   );
@@ -345,7 +399,13 @@ function OsuIcon() {
   );
 }
 
-export function SocialCards({ userAgent }: { userAgent: string | null }) {
+export function SocialCards({
+  userAgent,
+  weather,
+}: {
+  userAgent: string | null;
+  weather: NagoyaWeather;
+}) {
   return (
     <div className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4">
       <GitHubCard userAgent={userAgent} />
@@ -370,7 +430,7 @@ export function SocialCards({ userAgent }: { userAgent: string | null }) {
         userAgent={userAgent}
       />
       <NowPlayingCard userAgent={userAgent} />
-      <WeatherCard userAgent={userAgent} />
+      <WeatherCard userAgent={userAgent} weather={weather} />
       <ServiceCard
         gradient={gradients.nostr}
         icon={
