@@ -162,6 +162,16 @@ const contributionCells = [
   ["c49", "bg-white/15"],
 ];
 
+const SPOTIFY_TRACK_URL = "https://open.spotify.com/track/1NGDRoqywxoyMRNrCV4g1L";
+const WEATHER_SEARCH_URL =
+  "https://www.google.com/search?q=Nagoya+weather";
+const GITHUB_URL = "https://github.com/aomona";
+const DISCORD_URL = "https://discord.gg/4pBwnYEtJW";
+const X_URL = "https://x.com/aomona_";
+const OSU_URL = "https://osu.ppy.sh/users/16801089";
+const TETRIO_URL = "https://ch.tetr.io/u/aomona";
+const VRCHAT_URL = "https://vrchat.com/home/user/usr_d899b13d-3e10-4fd6-a099-e5de87043547";
+
 function GlassCard({
   className = "",
   gradient,
@@ -200,6 +210,7 @@ function ServiceCard({
   subtitle,
   userAgent,
   iconClassName = "size-9",
+  onClick,
 }: {
   className?: string;
   gradient: CardGradient;
@@ -208,9 +219,10 @@ function ServiceCard({
   subtitle?: string;
   userAgent: string | null;
   iconClassName?: string;
+  onClick?: () => void;
 }) {
   return (
-    <GlassCard className={`aspect-square ${className}`} gradient={gradient} userAgent={userAgent}>
+    <GlassCard className={`aspect-square ${className}`} gradient={gradient} userAgent={userAgent} onClick={onClick}>
       <div className="flex h-full flex-col justify-between">
         <div className={iconClassName}>{icon}</div>
         <div className="leading-normal text-white">
@@ -234,12 +246,13 @@ function ContributionGrid() {
   );
 }
 
-function GitHubCard({ userAgent }: { userAgent: string | null }) {
+function GitHubCard({ userAgent, onClick }: { userAgent: string | null; onClick?: () => void }) {
   return (
     <GlassCard
       className="col-span-2 aspect-2/1 md:aspect-auto"
       gradient={gradients.github}
       userAgent={userAgent}
+      onClick={onClick}
     >
       <div className="flex h-full gap-3">
         <div className="flex min-w-0 flex-1 flex-col justify-between">
@@ -252,13 +265,20 @@ function GitHubCard({ userAgent }: { userAgent: string | null }) {
   );
 }
 
-function NowPlayingCard({ userAgent }: { userAgent: string | null }) {
+function NowPlayingCard({
+  userAgent,
+  onClick,
+}: {
+  userAgent: string | null;
+  onClick?: () => void;
+}) {
   return (
     <GlassCard
       className="col-span-2 aspect-2/1 md:aspect-auto"
       gradient={gradients.player}
       overlay="bg-black/50"
       userAgent={userAgent}
+      onClick={onClick}
     >
       <div className="flex h-full items-center gap-3">
         <div className="relative aspect-square h-full shrink-0">
@@ -320,7 +340,15 @@ function formatCurrentTemp(value: number | null) {
   return `${Number.isInteger(value) ? value : value.toFixed(1)}°C`;
 }
 
-function WeatherCard({ userAgent, weather }: { userAgent: string | null; weather: NagoyaWeather }) {
+function WeatherCard({
+  userAgent,
+  weather,
+  onClick,
+}: {
+  userAgent: string | null;
+  weather: NagoyaWeather;
+  onClick?: () => void;
+}) {
   const current = weather.current;
   const observedDate = current?.observedAt.slice(0, 10);
   const needsToday = Boolean(observedDate) && weather.weekly[0]?.date !== observedDate;
@@ -346,6 +374,7 @@ function WeatherCard({ userAgent, weather }: { userAgent: string | null; weather
       gradient={gradients.weather}
       overlay="bg-black/20"
       userAgent={userAgent}
+      onClick={onClick}
     >
       <div className="flex h-full flex-col gap-1.5 overflow-hidden sm:gap-2">
         <div className="flex items-center gap-2">
@@ -409,6 +438,10 @@ function OsuIcon() {
   );
 }
 
+function openUrl(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 export function SocialCards({
   userAgent,
   weather,
@@ -418,7 +451,7 @@ export function SocialCards({
 }) {
   return (
     <div className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4">
-      <GitHubCard userAgent={userAgent} />
+      <GitHubCard userAgent={userAgent} onClick={() => openUrl(GITHUB_URL)} />
       <ServiceCard
         gradient={gradients.discord}
         icon={
@@ -432,20 +465,30 @@ export function SocialCards({
         }
         title="community"
         userAgent={userAgent}
+        onClick={() => openUrl(DISCORD_URL)}
       />
       <ServiceCard
         gradient={gradients.x}
         icon={<Image alt="X" className="size-full" height={55} src={figmaAssets.x} width={55} />}
         title="@aomona_"
         userAgent={userAgent}
+        onClick={() => openUrl(X_URL)}
       />
-      <NowPlayingCard userAgent={userAgent} />
-      <WeatherCard userAgent={userAgent} weather={weather} />
+      <NowPlayingCard
+        userAgent={userAgent}
+        onClick={() => openUrl(SPOTIFY_TRACK_URL)}
+      />
+      <WeatherCard
+        userAgent={userAgent}
+        weather={weather}
+        onClick={() => openUrl(WEATHER_SEARCH_URL)}
+      />
       <ServiceCard
         gradient={gradients.nostr}
         icon={
           <Image alt="Nostr" className="size-full" height={55} src={figmaAssets.nostr} width={55} />
         }
+        iconClassName="size-10"
         title="nostr"
         userAgent={userAgent}
       />
@@ -455,6 +498,7 @@ export function SocialCards({
         title="@aomona"
         subtitle="1,780pp"
         userAgent={userAgent}
+        onClick={() => openUrl(OSU_URL)}
       />
       <ServiceCard
         gradient={gradients.tetrio}
@@ -470,14 +514,17 @@ export function SocialCards({
         title="@aomona"
         subtitle="2,349.62TR"
         userAgent={userAgent}
+        onClick={() => openUrl(TETRIO_URL)}
       />
       <ServiceCard
         gradient={gradients.vrchat}
         icon={
-          <Image alt="VRChat" className="w-18" height={35} src={figmaAssets.vrchat} width={70} />
+          <Image alt="VRChat" className="w-20" height={40} src={figmaAssets.vrchat} width={80} />
         }
+        iconClassName="w-20 self-start"
         title="あおもな"
         userAgent={userAgent}
+        onClick={() => openUrl(VRCHAT_URL)}
       />
     </div>
   );
