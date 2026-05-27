@@ -36,7 +36,7 @@ type CardProps = {
 };
 
 const cardBase =
-  "relative isolate overflow-hidden rounded-[34px] border border-black/15 p-4 shadow-[3px_4px_20px_-2px_rgba(0,0,0,0.25)] sm:p-6";
+  "relative isolate flex flex-col overflow-hidden rounded-[34px] border border-black/15 p-4 shadow-[3px_4px_20px_-2px_rgba(0,0,0,0.25)] sm:p-6";
 
 const gradients = {
   github: {
@@ -174,7 +174,7 @@ function GlassCard({
       style={{ backgroundColor: gradient.baseColor }}
     >
       <div className={`absolute inset-0 ${overlay}`} />
-      <div className="relative z-10 h-full">{children}</div>
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</div>
       {onClick ? (
         <button
           aria-label={ariaLabel}
@@ -216,12 +216,14 @@ function ServiceCard({
       userAgent={userAgent}
       onClick={onClick}
     >
-      <div className="flex h-full flex-col justify-between">
+      <div className="flex min-h-0 flex-1 flex-col justify-between">
         <div className={iconClassName}>{icon}</div>
-        <div className="leading-normal text-white">
+        <div className="leading-tight text-white">
           <p className="whitespace-nowrap text-xl font-medium sm:text-2xl">{title}</p>
           {subtitle ? (
-            <p className="mt-1 whitespace-nowrap text-base font-light sm:text-xl">{subtitle}</p>
+            <p className="mt-1 whitespace-nowrap text-base font-light leading-tight sm:text-xl">
+              {subtitle}
+            </p>
           ) : null}
         </div>
       </div>
@@ -273,10 +275,10 @@ function GitHubCard({
       userAgent={userAgent}
       onClick={onClick}
     >
-      <div className="flex h-full gap-3">
+      <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-w-0 flex-1 flex-col justify-between">
           <Image alt="GitHub" className="size-12" height={55} src={figmaAssets.github} width={55} />
-          <p className="whitespace-nowrap text-xl font-medium sm:text-2xl">@aomona</p>
+          <p className="whitespace-nowrap text-xl font-medium leading-tight sm:text-2xl">@aomona</p>
         </div>
         <ContributionGrid contributions={contributions} />
       </div>
@@ -345,8 +347,8 @@ function NowPlayingCard({
       onClick={onClick}
       ariaLabel={track ? `Open Spotify track: ${title} by ${artist}` : "Open Spotify"}
     >
-      <div className="flex h-full items-center gap-3">
-        <div className="relative aspect-square h-full shrink-0">
+      <div className="flex min-h-0 flex-1 items-center gap-3">
+        <div className="relative aspect-square h-full min-h-0 shrink-0">
           {isLoading ? (
             <LoadingAlbumArt />
           ) : (
@@ -359,9 +361,9 @@ function NowPlayingCard({
             />
           )}
         </div>
-        <div className="flex h-full min-w-0 flex-1 flex-col justify-between">
+        <div className="flex min-h-0 min-w-0 flex-1 self-stretch flex-col justify-between">
           <div className="flex items-start justify-between gap-3">
-            <p className="whitespace-nowrap text-base font-bold">{label}</p>
+            <p className="whitespace-nowrap text-base font-bold leading-tight">{label}</p>
             <Image
               alt="Spotify"
               className="size-9 sm:size-10"
@@ -446,7 +448,7 @@ function WeatherCard({
       onClick={onClick}
       ariaLabel="Open Nagoya weather search"
     >
-      <div className="flex h-full flex-col gap-1.5 overflow-hidden sm:gap-2">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden sm:gap-2">
         <div className="flex items-center gap-2">
           {current ? (
             <WeatherIcon className="size-8 shrink-0 text-white sm:size-9" kind={current.kind} />
