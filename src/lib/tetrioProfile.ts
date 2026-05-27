@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchWithTimeout";
+
 const TETRIO_USERNAME = "aomona";
 const TETRIO_LEAGUE_API_URL = `https://ch.tetr.io/api/users/${TETRIO_USERNAME}/summaries/league`;
 
@@ -30,7 +32,7 @@ export function getTetrioDisplay(profile: TetrioProfile): string {
 
 export async function getTetrioProfile(): Promise<TetrioProfile> {
   try {
-    const response = await fetch(TETRIO_LEAGUE_API_URL, {
+    const response = await fetchWithTimeout(TETRIO_LEAGUE_API_URL, {
       next: { revalidate: 3600 },
     });
 

@@ -2,7 +2,7 @@ export type SpotifyTrack = {
   title: string;
   artist: string;
   album: string;
-  albumArtUrl: string;
+  albumArtUrl: string | null;
 
   trackUrl: string;
   isPlaying: boolean;
@@ -23,12 +23,23 @@ export async function extractColors(imageUrl: string, count = 5): Promise<string
   }
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      img.onload = null;
+      img.onerror = null;
+      callback();
+    };
+    const timeout = window.setTimeout(() => settle(() => resolve([])), 5000);
+
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) {
-          resolve([]);
+          settle(() => resolve([]));
           return;
         }
 
@@ -81,12 +92,14 @@ export async function extractColors(imageUrl: string, count = 5): Promise<string
           if (!tooSimilar) colors.push(hex);
         }
 
-        resolve(colors.length > 0 ? colors : ["#1a1a2e", "#16213e", "#0f3460", "#e94560"]);
+        settle(() =>
+          resolve(colors.length > 0 ? colors : ["#1a1a2e", "#16213e", "#0f3460", "#e94560"]),
+        );
       } catch {
-        resolve([]);
+        settle(() => resolve([]));
       }
     };
-    img.onerror = () => reject(new Error("Failed to load image"));
+    img.onerror = () => settle(() => reject(new Error("Failed to load image")));
     img.src = imageUrl;
   });
 }
