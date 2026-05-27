@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
+import type { NowPlayingResponse } from "@/lib/spotify";
 
 export const dynamic = "force-dynamic";
+
+const NOW_PLAYING_CACHE_SECONDS = 60;
+const NOW_PLAYING_CACHE_MS = NOW_PLAYING_CACHE_SECONDS * 1000;
+const NOW_PLAYING_CACHE_CONTROL = `public, max-age=${NOW_PLAYING_CACHE_SECONDS}, s-maxage=${NOW_PLAYING_CACHE_SECONDS}, stale-while-revalidate=${NOW_PLAYING_CACHE_SECONDS}`;
 
 type SpotifyTokenResponse = {
   access_token: string;
@@ -9,6 +14,7 @@ type SpotifyTokenResponse = {
   expires_in: number;
 };
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
+let cachedNowPlaying: { data: NowPlayingResponse; expiresAt: number } | null = null;
 
 type SpotifyTrackItem = {
   name: string;
@@ -36,6 +42,22 @@ type SpotifyRecentResponse = {
 
 function toAlbumArtProxyUrl(url: string): string {
   return url ? `/api/spotify-album-art?url=${encodeURIComponent(url)}` : "";
+}
+
+function nowPlayingJson(data: NowPlayingResponse): NextResponse<NowPlayingResponse> {
+  return NextResponse.json(data, {
+    headers: {
+      "Cache-Control": NOW_PLAYING_CACHE_CONTROL,
+    },
+  });
+}
+
+function uncachedNowPlayingJson(data: NowPlayingResponse): NextResponse<NowPlayingResponse> {
+  return NextResponse.json(data, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 async function getAccessToken(): Promise<string> {
@@ -85,76 +107,88 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
+async function fetchNowPlaying(): Promise<NowPlayingResponse> {
+  const accessToken = await getAccessToken();
+
+  // Try currently playing first
+  const nowRes = await fetchWithTimeout("https://api.spotify.com/v1/me/player/currently-playing", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (nowRes.status === 204 || nowRes.status === 200) {
+    const nowData: SpotifyNowPlaying | null = nowRes.status === 200 ? await nowRes.json() : null;
+
+    if (nowData?.is_playing && nowData.item) {
+      const track = nowData.item;
+      const image = track.album.images[0];
+      const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "") || null;
+
+      return {
+        track: {
+          title: track.name,
+          artist: track.artists.map((a) => a.name).join(", "),
+          album: track.album.name,
+          albumArtUrl,
+          trackUrl: track.external_urls.spotify,
+          isPlaying: true,
+          playedAt: null,
+        },
+      };
+    }
+  }
+
+  // Fall back to recently played
+  const recentRes = await fetchWithTimeout(
+    "https://api.spotify.com/v1/me/player/recently-played?limit=1",
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+
+  if (!recentRes.ok) {
+    throw new Error(`Spotify recent tracks failed: ${recentRes.status}`);
+  }
+
+  const recentData: SpotifyRecentResponse = await recentRes.json();
+  const recent = recentData.items[0];
+
+  if (!recent) {
+    return { track: null };
+  }
+
+  const track = recent.track;
+  const image = track.album.images[0];
+  const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "") || null;
+
+  return {
+    track: {
+      title: track.name,
+      artist: track.artists.map((a) => a.name).join(", "),
+      album: track.album.name,
+      albumArtUrl,
+      trackUrl: track.external_urls.spotify,
+      isPlaying: false,
+      playedAt: recent.played_at,
+    },
+  };
+}
+
 export async function GET() {
+  const now = Date.now();
+  if (cachedNowPlaying && cachedNowPlaying.expiresAt > now) {
+    return nowPlayingJson(cachedNowPlaying.data);
+  }
+
   try {
-    const accessToken = await getAccessToken();
-
-    // Try currently playing first
-    const nowRes = await fetchWithTimeout(
-      "https://api.spotify.com/v1/me/player/currently-playing",
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
-
-    if (nowRes.status === 204 || nowRes.status === 200) {
-      const nowData: SpotifyNowPlaying | null = nowRes.status === 200 ? await nowRes.json() : null;
-
-      if (nowData?.is_playing && nowData.item) {
-        const track = nowData.item;
-        const image = track.album.images[0];
-        const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "") || null;
-
-        return NextResponse.json({
-          track: {
-            title: track.name,
-            artist: track.artists.map((a) => a.name).join(", "),
-            album: track.album.name,
-            albumArtUrl,
-            trackUrl: track.external_urls.spotify,
-            isPlaying: true,
-            playedAt: null,
-          },
-        });
-      }
-    }
-
-    // Fall back to recently played
-    const recentRes = await fetchWithTimeout(
-      "https://api.spotify.com/v1/me/player/recently-played?limit=1",
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
-
-    if (!recentRes.ok) {
-      throw new Error(`Spotify recent tracks failed: ${recentRes.status}`);
-    }
-
-    const recentData: SpotifyRecentResponse = await recentRes.json();
-    const recent = recentData.items[0];
-
-    if (!recent) {
-      return NextResponse.json({ track: null });
-    }
-
-    const track = recent.track;
-    const image = track.album.images[0];
-    const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "") || null;
-
-    return NextResponse.json({
-      track: {
-        title: track.name,
-        artist: track.artists.map((a) => a.name).join(", "),
-        album: track.album.name,
-        albumArtUrl,
-        trackUrl: track.external_urls.spotify,
-        isPlaying: false,
-        playedAt: recent.played_at,
-      },
-    });
+    const data = await fetchNowPlaying();
+    cachedNowPlaying = { data, expiresAt: now + NOW_PLAYING_CACHE_MS };
+    return nowPlayingJson(data);
   } catch (err) {
     console.error("Now playing error:", err);
-    return NextResponse.json({ track: null });
+    if (cachedNowPlaying) {
+      return nowPlayingJson(cachedNowPlaying.data);
+    }
+
+    return uncachedNowPlayingJson({ track: null });
   }
 }
