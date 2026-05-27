@@ -4,7 +4,7 @@ import type { NowPlayingResponse } from "@/lib/spotify";
 
 export const dynamic = "force-dynamic";
 
-const NOW_PLAYING_CACHE_SECONDS = 60;
+const NOW_PLAYING_CACHE_SECONDS = 30;
 const NOW_PLAYING_CACHE_MS = NOW_PLAYING_CACHE_SECONDS * 1000;
 const NOW_PLAYING_CACHE_CONTROL = `public, max-age=${NOW_PLAYING_CACHE_SECONDS}, s-maxage=${NOW_PLAYING_CACHE_SECONDS}, stale-while-revalidate=${NOW_PLAYING_CACHE_SECONDS}`;
 
