@@ -9,7 +9,15 @@ import type { SpotifyTrack } from "@/lib/spotify";
 import { GrainGradient } from "grain-gradient/react";
 import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
 import Image from "next/image";
-import { type CSSProperties, type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import gsap from "gsap";
 import { figmaAssets } from "./assets";
 
@@ -28,6 +36,7 @@ type CardGradient = {
 type CardProps = {
   className?: string;
   gradient: CardGradient;
+  backgroundTransitionKey?: string;
   overlay?: string;
   children: ReactNode;
   userAgent: string | null;
@@ -156,15 +165,123 @@ function formatOsuPp(pp: number | null) {
   return pp === null ? "pp unavailable" : `${Math.round(pp).toLocaleString("en-US")}pp`;
 }
 
+function getGradientColorAt(colors: string[], index: number) {
+  return colors[index] ?? colors.at(-1) ?? "#000000";
+}
+
+function interpolateCardGradient(
+  from: CardGradient,
+  to: CardGradient,
+  progress: number,
+): CardGradient {
+  const colorCount = Math.max(from.colors.length, to.colors.length);
+  const colors = Array.from({ length: colorCount }, (_, index) =>
+    gsap.utils.interpolate(
+      getGradientColorAt(from.colors, index),
+      getGradientColorAt(to.colors, index),
+      progress,
+    ),
+  );
+
+  return {
+    ...to,
+    baseColor: gsap.utils.interpolate(from.baseColor, to.baseColor, progress),
+    colors,
+  };
+}
+
+function getGradientOverlayBackground(gradient: CardGradient) {
+  const [colorA, colorB, colorC, colorD] = [0, 1, 2, 3].map((index) =>
+    getGradientColorAt(gradient.colors, index),
+  );
+
+  return [
+    `radial-gradient(circle at 18% 18%, ${colorB} 0%, transparent 34%)`,
+    `radial-gradient(circle at 78% 24%, ${colorC} 0%, transparent 32%)`,
+    `radial-gradient(circle at 42% 82%, ${colorD} 0%, transparent 38%)`,
+    `linear-gradient(135deg, ${gradient.baseColor}, ${colorA})`,
+  ].join(", ");
+}
+
 function GlassCard({
   className = "",
   gradient,
+  backgroundTransitionKey,
   overlay = "bg-black/15",
   children,
   userAgent,
   onClick,
   ariaLabel,
 }: CardProps) {
+  const gradientTransitionRef = useRef<HTMLDivElement>(null);
+  const latestGradientRef = useRef(gradient);
+  const previousGradientRef = useRef(gradient);
+  const transitionKeyRef = useRef(backgroundTransitionKey);
+  const gradientTweenRef = useRef<gsap.core.Tween | null>(null);
+
+  latestGradientRef.current = gradient;
+
+  useLayoutEffect(() => {
+    if (backgroundTransitionKey === undefined) {
+      gradientTweenRef.current?.kill();
+      previousGradientRef.current = latestGradientRef.current;
+      return;
+    }
+
+    if (transitionKeyRef.current === undefined) {
+      transitionKeyRef.current = backgroundTransitionKey;
+      previousGradientRef.current = latestGradientRef.current;
+      return;
+    }
+
+    if (transitionKeyRef.current !== backgroundTransitionKey) {
+      transitionKeyRef.current = backgroundTransitionKey;
+      gradientTweenRef.current?.kill();
+
+      const fromGradient = previousGradientRef.current;
+      const toGradient = latestGradientRef.current;
+      previousGradientRef.current = toGradient;
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
+
+      const transitionOverlay = gradientTransitionRef.current;
+      if (!transitionOverlay) return;
+
+      const progress = { value: 0 };
+      gsap.set(transitionOverlay, {
+        background: getGradientOverlayBackground(fromGradient),
+        opacity: 1,
+      });
+
+      gradientTweenRef.current = gsap.to(progress, {
+        value: 1,
+        duration: 1.15,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          const nextGradient = interpolateCardGradient(fromGradient, toGradient, progress.value);
+          transitionOverlay.style.background = getGradientOverlayBackground(nextGradient);
+          transitionOverlay.style.opacity = String(1 - progress.value);
+        },
+        onComplete: () => {
+          gsap.set(transitionOverlay, { opacity: 0 });
+          gradientTweenRef.current = null;
+        },
+      });
+
+      return () => {
+        gradientTweenRef.current?.kill();
+        gradientTweenRef.current = null;
+      };
+    }
+
+    return () => {
+      gradientTweenRef.current?.kill();
+      gradientTweenRef.current = null;
+    };
+  }, [backgroundTransitionKey]);
+
   return (
     <GrainGradient
       {...gradient}
@@ -173,6 +290,7 @@ function GlassCard({
       className={`${cardBase} ${className} ${onClick ? "cursor-pointer" : ""}`}
       style={{ backgroundColor: gradient.baseColor }}
     >
+      <div ref={gradientTransitionRef} className="pointer-events-none absolute inset-0 opacity-0" />
       <div className={`absolute inset-0 ${overlay}`} />
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</div>
       {onClick ? (
@@ -306,18 +424,21 @@ function LoadingAlbumArt() {
   );
 }
 
-function NowPlayingCard({
-  userAgent,
+function getNowPlayingKey(track: SpotifyTrack | null, isLoading: boolean) {
+  if (isLoading) return "loading";
+  if (!track) return "empty";
+
+  return track.trackUrl || `${track.title}:${track.artist}:${track.album}`;
+}
+
+function NowPlayingContent({
   track,
-  colors,
   isLoading,
-  onClick,
+  artworkRef,
 }: {
-  userAgent: string | null;
   track: SpotifyTrack | null;
-  colors: string[] | null;
   isLoading: boolean;
-  onClick?: () => void;
+  artworkRef: RefObject<HTMLDivElement | null>;
 }) {
   const isPlaying = track?.isPlaying ?? false;
   const label = isLoading
@@ -331,53 +452,145 @@ function NowPlayingCard({
   const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
   const artUrl = track?.albumArtUrl || figmaAssets.album;
 
-  const playerColors = colors?.length
-    ? colors.slice(0, 4).map((color) => darkenColor(color))
-    : null;
-  const playerGradient: CardGradient = playerColors
-    ? { ...gradients.player, baseColor: playerColors[0], colors: playerColors }
-    : gradients.player;
+  return (
+    <div className="flex min-h-0 flex-1 items-center gap-3">
+      <div
+        ref={artworkRef}
+        className="relative aspect-square h-full min-h-0 shrink-0 overflow-hidden rounded-lg shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/15 [transform-style:preserve-3d]"
+      >
+        {isLoading ? (
+          <LoadingAlbumArt />
+        ) : (
+          <Image
+            alt={track ? `${track.album} album art` : "Album artwork unavailable"}
+            className="object-cover"
+            fill
+            sizes="183px"
+            src={artUrl}
+          />
+        )}
+      </div>
+      <div className="flex min-h-0 min-w-0 flex-1 self-stretch flex-col justify-between">
+        <div className="flex items-start justify-between gap-3">
+          <p className="whitespace-nowrap text-base font-bold leading-tight">{label}</p>
+          <Image
+            alt="Spotify"
+            className="size-9 drop-shadow-[0_8px_20px_rgba(30,215,96,0.28)] sm:size-10"
+            height={42}
+            src={figmaAssets.spotify}
+            width={42}
+          />
+        </div>
+        <div>
+          <p className="truncate text-xl font-medium">{title}</p>
+          <p className="truncate text-base font-light">{artist}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NowPlayingCard({
+  userAgent,
+  track,
+  colors,
+  isLoading,
+  onClick,
+}: {
+  userAgent: string | null;
+  track: SpotifyTrack | null;
+  colors: string[] | null;
+  isLoading: boolean;
+  onClick?: () => void;
+}) {
+  const artworkRef = useRef<HTMLDivElement>(null);
+  const flipTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const trackKey = getNowPlayingKey(track, isLoading);
+  const trackKeyRef = useRef(trackKey);
+  const [displayedContent, setDisplayedContent] = useState({ track, isLoading });
+
+  const playerGradient = useMemo<CardGradient>(() => {
+    const playerColors = colors?.length
+      ? colors.slice(0, 4).map((color) => darkenColor(color))
+      : null;
+
+    return playerColors
+      ? { ...gradients.player, baseColor: playerColors[0], colors: playerColors }
+      : gradients.player;
+  }, [colors]);
+  const backgroundTransitionKey = `${trackKey}:${playerGradient.baseColor}:${playerGradient.colors.join(":")}`;
+  const title = isLoading ? "Loading Spotify" : (track?.title ?? "Not playing");
+  const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
+
+  useLayoutEffect(() => {
+    if (trackKeyRef.current === trackKey) {
+      setDisplayedContent((prev) => {
+        if (prev.track === track && prev.isLoading === isLoading) return prev;
+        return { track, isLoading };
+      });
+      return;
+    }
+
+    const el = artworkRef.current;
+    trackKeyRef.current = trackKey;
+
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayedContent({ track, isLoading });
+      return;
+    }
+
+    flipTimelineRef.current?.kill();
+
+    const tl = gsap.timeline({
+      defaults: { ease: "power3.inOut" },
+      onComplete: () => {
+        flipTimelineRef.current = null;
+      },
+    });
+    flipTimelineRef.current = tl;
+
+    tl.set(el, {
+      backfaceVisibility: "hidden",
+      transformPerspective: 900,
+      transformOrigin: "50% 50%",
+      transformStyle: "preserve-3d",
+      willChange: "transform, opacity, filter",
+    })
+      .to(el, {
+        duration: 0.28,
+        filter: "blur(4px)",
+        opacity: 0.42,
+        rotationY: 90,
+        x: 12,
+        ease: "power2.in",
+      })
+      .call(() => setDisplayedContent({ track, isLoading }))
+      .set(el, { rotationY: -90, x: -12 })
+      .to(el, {
+        duration: 0.52,
+        filter: "blur(0px)",
+        opacity: 1,
+        rotationY: 0,
+        x: 0,
+        ease: "expo.out",
+      });
+
+    return () => {
+      tl.kill();
+    };
+  }, [trackKey, track, isLoading]);
 
   return (
     <GlassCard
       className="col-span-2 aspect-2/1 md:aspect-auto"
       gradient={playerGradient}
+      backgroundTransitionKey={backgroundTransitionKey}
       overlay="bg-black/50"
       userAgent={userAgent}
       onClick={onClick}
       ariaLabel={track ? `Open Spotify track: ${title} by ${artist}` : "Open Spotify"}
     >
-      <div className="flex min-h-0 flex-1 items-center gap-3">
-        <div className="relative aspect-square h-full min-h-0 shrink-0">
-          {isLoading ? (
-            <LoadingAlbumArt />
-          ) : (
-            <Image
-              alt={track ? `${track.album} album art` : "Album artwork unavailable"}
-              className="rounded-lg object-cover"
-              fill
-              sizes="183px"
-              src={artUrl}
-            />
-          )}
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-1 self-stretch flex-col justify-between">
-          <div className="flex items-start justify-between gap-3">
-            <p className="whitespace-nowrap text-base font-bold leading-tight">{label}</p>
-            <Image
-              alt="Spotify"
-              className="size-9 sm:size-10"
-              height={42}
-              src={figmaAssets.spotify}
-              width={42}
-            />
-          </div>
-          <div>
-            <p className="truncate text-xl font-medium">{title}</p>
-            <p className="truncate text-base font-light">{artist}</p>
-          </div>
-        </div>
-      </div>
+      <NowPlayingContent {...displayedContent} artworkRef={artworkRef} />
     </GlassCard>
   );
 }
