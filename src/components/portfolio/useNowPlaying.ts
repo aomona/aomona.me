@@ -67,6 +67,8 @@ export function useNowPlaying(pollIntervalMs = 30000): NowPlayingData {
         if (err instanceof Error && err.name === "AbortError") return;
         setData((prev) => ({
           ...prev,
+          track: null,
+          colors: null,
           isLoading: false,
           error: err instanceof Error ? err.message : "Unknown error",
         }));

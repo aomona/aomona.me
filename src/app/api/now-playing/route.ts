@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ async function getAccessToken(): Promise<string> {
     throw new Error("Missing Spotify credentials");
   }
 
-  const res = await fetch("https://accounts.spotify.com/api/token", {
+  const res = await fetchWithTimeout("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -64,12 +65,19 @@ async function getAccessToken(): Promise<string> {
   });
 
   if (!res.ok) {
-    const errBody = await res.text().catch(() => "no body");
-    console.error("Spotify token error body:", errBody);
-    throw new Error(`Spotify token refresh failed: ${res.status} — ${errBody}`);
+    throw new Error(`Spotify token refresh failed: ${res.status}`);
   }
 
   const data: SpotifyTokenResponse = await res.json();
+  if (
+    typeof data.access_token !== "string" ||
+    data.access_token.length === 0 ||
+    !Number.isFinite(data.expires_in) ||
+    data.expires_in <= 0
+  ) {
+    throw new Error("Invalid Spotify token response");
+  }
+
   cachedAccessToken = {
     token: data.access_token,
     expiresAt: now + Math.max(0, data.expires_in - 60) * 1000,
@@ -82,9 +90,12 @@ export async function GET() {
     const accessToken = await getAccessToken();
 
     // Try currently playing first
-    const nowRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const nowRes = await fetchWithTimeout(
+      "https://api.spotify.com/v1/me/player/currently-playing",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
     if (nowRes.status === 204 || nowRes.status === 200) {
       const nowData: SpotifyNowPlaying | null = nowRes.status === 200 ? await nowRes.json() : null;
@@ -92,7 +103,7 @@ export async function GET() {
       if (nowData?.is_playing && nowData.item) {
         const track = nowData.item;
         const image = track.album.images[0];
-        const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "");
+        const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "") || null;
 
         return NextResponse.json({
           track: {
@@ -109,9 +120,12 @@ export async function GET() {
     }
 
     // Fall back to recently played
-    const recentRes = await fetch("https://api.spotify.com/v1/me/player/recently-played?limit=1", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const recentRes = await fetchWithTimeout(
+      "https://api.spotify.com/v1/me/player/recently-played?limit=1",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
     if (!recentRes.ok) {
       throw new Error(`Spotify recent tracks failed: ${recentRes.status}`);
@@ -126,7 +140,7 @@ export async function GET() {
 
     const track = recent.track;
     const image = track.album.images[0];
-    const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "");
+    const albumArtUrl = toAlbumArtProxyUrl(image?.url ?? "") || null;
 
     return NextResponse.json({
       track: {
@@ -141,6 +155,6 @@ export async function GET() {
     });
   } catch (err) {
     console.error("Now playing error:", err);
-    return NextResponse.json({ track: null }, { status: 500 });
+    return NextResponse.json({ track: null });
   }
 }

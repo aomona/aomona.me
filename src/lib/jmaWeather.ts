@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchWithTimeout";
+
 const AMEDAS_STATION_CODE = "51106";
 const FORECAST_OFFICE_CODE = "230000";
 const FORECAST_AREA_CODE = "230010";
@@ -106,19 +108,17 @@ export async function getNagoyaWeather(): Promise<NagoyaWeather> {
 }
 
 async function fetchNagoyaWeather(): Promise<NagoyaWeather> {
-  const forecastPromise = fetchJmaJson<ForecastReport[]>(
-    `${JMA_BASE_URL}/forecast/data/forecast/${FORECAST_OFFICE_CODE}.json`,
-    1800,
-  );
-
-  const latestTime = await fetchLatestAmedasTime();
-  const [amedasMap, forecast] = await Promise.all([
-    fetchJmaJson<Record<string, AmedasObservation>>(
-      `${JMA_BASE_URL}/amedas/data/map/${toAmedasMapTimestamp(latestTime)}.json`,
-      60,
+  const [latestTime, forecast] = await Promise.all([
+    fetchLatestAmedasTime(),
+    fetchJmaJson<ForecastReport[]>(
+      `${JMA_BASE_URL}/forecast/data/forecast/${FORECAST_OFFICE_CODE}.json`,
+      1800,
     ),
-    forecastPromise,
   ]);
+  const amedasMap = await fetchJmaJson<Record<string, AmedasObservation>>(
+    `${JMA_BASE_URL}/amedas/data/map/${toAmedasMapTimestamp(latestTime)}.json`,
+    60,
+  );
 
   const observation = amedasMap[AMEDAS_STATION_CODE];
   const currentForecast = getCurrentForecast(forecast);
@@ -135,7 +135,7 @@ async function fetchNagoyaWeather(): Promise<NagoyaWeather> {
 }
 
 async function fetchLatestAmedasTime(): Promise<string> {
-  const response = await fetch(`${JMA_BASE_URL}/amedas/data/latest_time.txt`, {
+  const response = await fetchWithTimeout(`${JMA_BASE_URL}/amedas/data/latest_time.txt`, {
     next: { revalidate: 60 },
   });
 
@@ -147,7 +147,7 @@ async function fetchLatestAmedasTime(): Promise<string> {
 }
 
 async function fetchJmaJson<T>(url: string, revalidate: number): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: { Accept: "application/json" },
     next: { revalidate },
   });

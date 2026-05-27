@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchWithTimeout";
+
 const GITHUB_GRAPHQL_ENDPOINT = "https://api.github.com/graphql";
 const GITHUB_LOGIN = "aomona";
 const CONTRIBUTION_CELL_COUNT = 49;
@@ -20,6 +22,7 @@ const COLOR_TO_LEVEL: Record<string, GitHubContributionCell["level"]> = {
 function colorToLevel(color: string): GitHubContributionCell["level"] {
   const known = COLOR_TO_LEVEL[color.toLowerCase()];
   if (known !== undefined) return known;
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return 0;
 
   // Fallback: green intensity → level
   const hex = color.replace("#", "");
@@ -67,7 +70,7 @@ export async function getGitHubContributions(): Promise<GitHubContributions> {
   }
 
   try {
-    const response = await fetch(GITHUB_GRAPHQL_ENDPOINT, {
+    const response = await fetchWithTimeout(GITHUB_GRAPHQL_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

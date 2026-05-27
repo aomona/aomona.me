@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchWithTimeout";
+
 const OSU_USER_ID = "16801089";
 const OSU_MODE = "osu";
 const OSU_TOKEN_URL = "https://osu.ppy.sh/oauth/token";
@@ -37,15 +39,19 @@ async function getOsuAccessToken(): Promise<string> {
   if (!clientId || !clientSecret) {
     throw new Error("Missing osu! API credentials");
   }
+  const numericClientId = Number(clientId);
+  if (!Number.isFinite(numericClientId)) {
+    throw new Error("Invalid osu! client ID");
+  }
 
-  const response = await fetch(OSU_TOKEN_URL, {
+  const response = await fetchWithTimeout(OSU_TOKEN_URL, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      client_id: Number(clientId),
+      client_id: numericClientId,
       client_secret: clientSecret,
       grant_type: "client_credentials",
       scope: "public",
@@ -57,6 +63,15 @@ async function getOsuAccessToken(): Promise<string> {
   }
 
   const data = (await response.json()) as OsuTokenResponse;
+  if (
+    typeof data.access_token !== "string" ||
+    data.access_token.length === 0 ||
+    !Number.isFinite(data.expires_in) ||
+    data.expires_in <= 0
+  ) {
+    throw new Error("Invalid osu! token response");
+  }
+
   cachedAccessToken = {
     token: data.access_token,
     expiresAt: now + Math.max(0, data.expires_in - 60) * 1000,
@@ -72,7 +87,7 @@ function parsePp(value: unknown): number | null {
 export async function getOsuProfile(): Promise<OsuProfile> {
   try {
     const accessToken = await getOsuAccessToken();
-    const response = await fetch(OSU_USER_API_URL, {
+    const response = await fetchWithTimeout(OSU_USER_API_URL, {
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${accessToken}`,

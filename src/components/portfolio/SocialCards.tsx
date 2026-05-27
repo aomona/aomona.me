@@ -327,7 +327,7 @@ function NowPlayingCard({
       : "Spotify";
   const title = isLoading ? "Loading Spotify" : (track?.title ?? "Not playing");
   const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
-  const artUrl = track?.albumArtUrl ?? figmaAssets.album;
+  const artUrl = track?.albumArtUrl || figmaAssets.album;
 
   const playerColors = colors?.length
     ? colors.slice(0, 4).map((color) => darkenColor(color))

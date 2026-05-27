@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { PortfolioPage } from "@/components/portfolio/PortfolioPage";
 import { getGitHubContributions } from "@/lib/githubContributions";
 import { getNagoyaWeather } from "@/lib/jmaWeather";
@@ -8,13 +6,14 @@ import { getTetrioProfile } from "@/lib/tetrioProfile";
 import { headers } from "next/headers";
 
 export default async function Home() {
-  const [headersList, weather, githubContributions, osuProfile, tetrioProfile] = await Promise.all([
-    headers(),
+  const dataPromise = Promise.all([
     getNagoyaWeather(),
     getGitHubContributions(),
     getOsuProfile(),
     getTetrioProfile(),
   ]);
+  const headersList = await headers();
+  const [weather, githubContributions, osuProfile, tetrioProfile] = await dataPromise;
   const userAgent = headersList.get("user-agent");
 
   return (

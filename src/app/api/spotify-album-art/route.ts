@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+import { fetchWithTimeout } from "@/lib/fetchWithTimeout";
 
 const SPOTIFY_IMAGE_HOST = "i.scdn.co";
 const SPOTIFY_IMAGE_PATH_PREFIX = "/image/";
@@ -30,12 +30,12 @@ export async function GET(request: Request) {
     return new Response("Invalid Spotify image URL", { status: 400 });
   }
 
-  const response = await fetch(imageUrl, {
+  const response = await fetchWithTimeout(imageUrl, {
     next: { revalidate: 86400 },
-  });
+  }).catch(() => null);
 
-  if (!response.ok || !response.body) {
-    return new Response("Spotify image unavailable", { status: response.status });
+  if (!response?.ok || !response.body) {
+    return new Response("Spotify image unavailable", { status: response?.status ?? 504 });
   }
 
   return new Response(response.body, {
