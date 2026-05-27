@@ -52,6 +52,14 @@ function nowPlayingJson(data: NowPlayingResponse): NextResponse<NowPlayingRespon
   });
 }
 
+function uncachedNowPlayingJson(data: NowPlayingResponse): NextResponse<NowPlayingResponse> {
+  return NextResponse.json(data, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 async function getAccessToken(): Promise<string> {
   const now = Date.now();
   if (cachedAccessToken && cachedAccessToken.expiresAt > now) {
@@ -177,6 +185,10 @@ export async function GET() {
     return nowPlayingJson(data);
   } catch (err) {
     console.error("Now playing error:", err);
-    return nowPlayingJson({ track: null });
+    if (cachedNowPlaying) {
+      return nowPlayingJson(cachedNowPlaying.data);
+    }
+
+    return uncachedNowPlayingJson({ track: null });
   }
 }
