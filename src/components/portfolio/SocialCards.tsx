@@ -14,6 +14,7 @@ import {
   type ReactNode,
   type RefObject,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -189,6 +190,19 @@ function interpolateCardGradient(
   };
 }
 
+function getGradientOverlayBackground(gradient: CardGradient) {
+  const [colorA, colorB, colorC, colorD] = [0, 1, 2, 3].map((index) =>
+    getGradientColorAt(gradient.colors, index),
+  );
+
+  return [
+    `radial-gradient(circle at 18% 18%, ${colorB} 0%, transparent 34%)`,
+    `radial-gradient(circle at 78% 24%, ${colorC} 0%, transparent 32%)`,
+    `radial-gradient(circle at 42% 82%, ${colorD} 0%, transparent 38%)`,
+    `linear-gradient(135deg, ${gradient.baseColor}, ${colorA})`,
+  ].join(", ");
+}
+
 function GlassCard({
   className = "",
   gradient,
@@ -199,23 +213,24 @@ function GlassCard({
   onClick,
   ariaLabel,
 }: CardProps) {
-  const renderedGradientRef = useRef(gradient);
+  const gradientTransitionRef = useRef<HTMLDivElement>(null);
+  const latestGradientRef = useRef(gradient);
+  const previousGradientRef = useRef(gradient);
   const transitionKeyRef = useRef(backgroundTransitionKey);
   const gradientTweenRef = useRef<gsap.core.Tween | null>(null);
-  const [renderedGradient, setRenderedGradient] = useState(gradient);
+
+  latestGradientRef.current = gradient;
 
   useLayoutEffect(() => {
     if (backgroundTransitionKey === undefined) {
       gradientTweenRef.current?.kill();
-      renderedGradientRef.current = gradient;
-      setRenderedGradient(gradient);
+      previousGradientRef.current = latestGradientRef.current;
       return;
     }
 
     if (transitionKeyRef.current === undefined) {
       transitionKeyRef.current = backgroundTransitionKey;
-      renderedGradientRef.current = gradient;
-      setRenderedGradient(gradient);
+      previousGradientRef.current = latestGradientRef.current;
       return;
     }
 
@@ -223,27 +238,34 @@ function GlassCard({
       transitionKeyRef.current = backgroundTransitionKey;
       gradientTweenRef.current?.kill();
 
+      const fromGradient = previousGradientRef.current;
+      const toGradient = latestGradientRef.current;
+      previousGradientRef.current = toGradient;
+
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        renderedGradientRef.current = gradient;
-        setRenderedGradient(gradient);
         return;
       }
 
-      const fromGradient = renderedGradientRef.current;
+      const transitionOverlay = gradientTransitionRef.current;
+      if (!transitionOverlay) return;
+
       const progress = { value: 0 };
+      gsap.set(transitionOverlay, {
+        background: getGradientOverlayBackground(fromGradient),
+        opacity: 1,
+      });
 
       gradientTweenRef.current = gsap.to(progress, {
         value: 1,
         duration: 1.15,
         ease: "power2.inOut",
         onUpdate: () => {
-          const nextGradient = interpolateCardGradient(fromGradient, gradient, progress.value);
-          renderedGradientRef.current = nextGradient;
-          setRenderedGradient(nextGradient);
+          const nextGradient = interpolateCardGradient(fromGradient, toGradient, progress.value);
+          transitionOverlay.style.background = getGradientOverlayBackground(nextGradient);
+          transitionOverlay.style.opacity = String(1 - progress.value);
         },
         onComplete: () => {
-          renderedGradientRef.current = gradient;
-          setRenderedGradient(gradient);
+          gsap.set(transitionOverlay, { opacity: 0 });
           gradientTweenRef.current = null;
         },
       });
@@ -254,26 +276,21 @@ function GlassCard({
       };
     }
 
-    if (!gradientTweenRef.current) {
-      renderedGradientRef.current = gradient;
-      setRenderedGradient(gradient);
-      transitionKeyRef.current = backgroundTransitionKey;
-    }
-
     return () => {
       gradientTweenRef.current?.kill();
       gradientTweenRef.current = null;
     };
-  }, [backgroundTransitionKey, gradient]);
+  }, [backgroundTransitionKey]);
 
   return (
     <GrainGradient
-      {...renderedGradient}
+      {...gradient}
       androidCanvasFallback="auto"
       androidCanvasFallbackUserAgent={userAgent}
       className={`${cardBase} ${className} ${onClick ? "cursor-pointer" : ""}`}
-      style={{ backgroundColor: renderedGradient.baseColor }}
+      style={{ backgroundColor: gradient.baseColor }}
     >
+      <div ref={gradientTransitionRef} className="pointer-events-none absolute inset-0 opacity-0" />
       <div className={`absolute inset-0 ${overlay}`} />
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</div>
       {onClick ? (
@@ -492,18 +509,27 @@ function NowPlayingCard({
   const trackKeyRef = useRef(trackKey);
   const [displayedContent, setDisplayedContent] = useState({ track, isLoading });
 
-  const playerColors = colors?.length
-    ? colors.slice(0, 4).map((color) => darkenColor(color))
-    : null;
-  const playerGradient: CardGradient = playerColors
-    ? { ...gradients.player, baseColor: playerColors[0], colors: playerColors }
-    : gradients.player;
+  const playerGradient = useMemo<CardGradient>(() => {
+    const playerColors = colors?.length
+      ? colors.slice(0, 4).map((color) => darkenColor(color))
+      : null;
+
+    return playerColors
+      ? { ...gradients.player, baseColor: playerColors[0], colors: playerColors }
+      : gradients.player;
+  }, [colors]);
   const backgroundTransitionKey = `${trackKey}:${playerGradient.baseColor}:${playerGradient.colors.join(":")}`;
   const title = isLoading ? "Loading Spotify" : (track?.title ?? "Not playing");
   const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
 
   useLayoutEffect(() => {
-    if (trackKeyRef.current === trackKey) return;
+    if (trackKeyRef.current === trackKey) {
+      setDisplayedContent((prev) => {
+        if (prev.track === track && prev.isLoading === isLoading) return prev;
+        return { track, isLoading };
+      });
+      return;
+    }
 
     const el = artworkRef.current;
     trackKeyRef.current = trackKey;
