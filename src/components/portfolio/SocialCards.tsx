@@ -28,6 +28,9 @@ type CardGradient = {
   frequency?: number;
   contrast?: number;
   opacity?: number;
+  numOctaves?: number;
+  size?: number;
+  stitchTiles?: boolean;
   blendMode?: CSSProperties["mixBlendMode"];
   saturation?: number;
   blur?: number;
@@ -46,6 +49,12 @@ type CardProps = {
 
 const cardBase =
   "relative isolate flex flex-col overflow-hidden rounded-[34px] border border-black/15 p-4 shadow-[3px_4px_20px_-2px_rgba(0,0,0,0.25)] sm:p-6";
+
+const cardGrainDefaults = {
+  numOctaves: 2,
+  size: 1100,
+  stitchTiles: true,
+} satisfies Pick<CardGradient, "numOctaves" | "size" | "stitchTiles">;
 
 const gradients = {
   github: {
@@ -284,6 +293,7 @@ function GlassCard({
 
   return (
     <GrainGradient
+      {...cardGrainDefaults}
       {...gradient}
       androidCanvasFallback="auto"
       androidCanvasFallbackUserAgent={userAgent}

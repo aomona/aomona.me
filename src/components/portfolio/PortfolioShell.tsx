@@ -3,7 +3,7 @@
 import { useNowPlaying } from "./useNowPlaying";
 import { HeroIntro } from "./HeroIntro";
 import { SocialCards } from "./SocialCards";
-import { GrainGradient } from "grain-gradient/react";
+import { WebGLGrainGradient } from "grain-gradient/webgl/react";
 import type { NagoyaWeather } from "@/lib/jmaWeather";
 import type { GitHubContributions } from "@/lib/githubContributions";
 import type { OsuProfile } from "@/lib/osuProfile";
@@ -25,7 +25,7 @@ export function PortfolioShell({
   const { track, colors, isLoading } = useNowPlaying(30000);
 
   return (
-    <GrainGradient
+    <WebGLGrainGradient
       androidCanvasFallback="auto"
       androidCanvasFallbackUserAgent={userAgent}
       className="min-h-dvh text-white"
@@ -41,6 +41,9 @@ export function PortfolioShell({
       motionPreset="orbit"
       motionSpeed={22}
       motionIntensity={34}
+      maxPixelRatio={1.25}
+      motionMaxPixelRatio={0.75}
+      fps={30}
     >
       <div className="relative z-10 min-h-dvh">
         <main className="flex min-h-dvh items-center justify-center px-6 py-5 sm:px-10 lg:px-16">
@@ -59,6 +62,6 @@ export function PortfolioShell({
           </div>
         </main>
       </div>
-    </GrainGradient>
+    </WebGLGrainGradient>
   );
 }
