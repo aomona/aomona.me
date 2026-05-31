@@ -516,7 +516,7 @@ function HoverMarqueeText({ className, text }: { className: string; text: string
             style={
               {
                 ["--spotify-marquee-distance" as "--spotify-marquee-distance"]: `${scrollDistance}px`,
-                ["--spotify-marquee-duration" as "--spotify-marquee-duration"]: `${Math.max(7, scrollDistance / 22)}s`,
+                ["--spotify-marquee-duration" as "--spotify-marquee-duration"]: `${Math.max(3, scrollDistance / 40)}s`,
               } as CSSProperties
             }
           >
