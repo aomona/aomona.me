@@ -22,7 +22,7 @@ img {
   user-select: none;
 }
 
-@keyframes spotify-marquee {
+@keyframes spotify-marquee-start {
   0% {
     transform: translate3d(0, 0, 0);
   }
@@ -37,12 +37,32 @@ img {
   }
 }
 
+@keyframes spotify-marquee-loop {
+  0%,
+  20% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(calc(var(--spotify-marquee-distance) * -1), 0, 0);
+  }
+
+  80%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .spotify-marquee {
   will-change: transform;
 }
 
 .group:hover .spotify-marquee {
-  animation: spotify-marquee var(--spotify-marquee-duration, 10s) linear infinite;
+  animation:
+    spotify-marquee-start var(--spotify-marquee-start-duration, 8s) linear 0s 1 both,
+    spotify-marquee-loop var(--spotify-marquee-loop-duration, 10s) linear
+      var(--spotify-marquee-start-duration, 8s) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

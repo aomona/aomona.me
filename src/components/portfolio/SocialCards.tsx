@@ -513,12 +513,15 @@ function HoverMarqueeText({ className, text }: { className: string; text: string
         >
           <span
             className="spotify-marquee inline-block whitespace-nowrap motion-reduce:animate-none"
-            style={
-              {
+            style={(() => {
+              const travelDuration = Math.max(3, scrollDistance / 40);
+
+              return {
                 ["--spotify-marquee-distance" as "--spotify-marquee-distance"]: `${scrollDistance}px`,
-                ["--spotify-marquee-duration" as "--spotify-marquee-duration"]: `${Math.max(3, scrollDistance / 40) * 2 + 2}s`,
-              } as CSSProperties
-            }
+                ["--spotify-marquee-start-duration" as "--spotify-marquee-start-duration"]: `${travelDuration * 2 + 2}s`,
+                ["--spotify-marquee-loop-duration" as "--spotify-marquee-loop-duration"]: `${travelDuration * 2 + 4}s`,
+              } as CSSProperties;
+            })()}
           >
             {text}
           </span>
