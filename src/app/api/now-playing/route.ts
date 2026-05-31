@@ -15,6 +15,7 @@ type SpotifyTokenResponse = {
 };
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 let cachedNowPlaying: { data: NowPlayingResponse; expiresAt: number } | null = null;
+let pendingNowPlaying: Promise<NowPlayingResponse> | null = null;
 
 type SpotifyTrackItem = {
   name: string;
@@ -42,6 +43,14 @@ type SpotifyRecentResponse = {
 
 function toAlbumArtProxyUrl(url: string): string {
   return url ? `/api/spotify-album-art?url=${encodeURIComponent(url)}` : "";
+}
+
+async function readJsonOrNull<T>(response: Response): Promise<T | null> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
 function nowPlayingJson(data: NowPlayingResponse): NextResponse<NowPlayingResponse> {
@@ -76,6 +85,7 @@ async function getAccessToken(): Promise<string> {
 
   const res = await fetchWithTimeout("https://accounts.spotify.com/api/token", {
     method: "POST",
+    cache: "no-store",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
@@ -112,11 +122,12 @@ async function fetchNowPlaying(): Promise<NowPlayingResponse> {
 
   // Try currently playing first
   const nowRes = await fetchWithTimeout("https://api.spotify.com/v1/me/player/currently-playing", {
+    cache: "no-store",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (nowRes.status === 204 || nowRes.status === 200) {
-    const nowData: SpotifyNowPlaying | null = nowRes.status === 200 ? await nowRes.json() : null;
+  if (nowRes.ok && nowRes.status !== 204) {
+    const nowData = await readJsonOrNull<SpotifyNowPlaying>(nowRes);
 
     if (nowData?.is_playing && nowData.item) {
       const track = nowData.item;
@@ -141,6 +152,7 @@ async function fetchNowPlaying(): Promise<NowPlayingResponse> {
   const recentRes = await fetchWithTimeout(
     "https://api.spotify.com/v1/me/player/recently-played?limit=1",
     {
+      cache: "no-store",
       headers: { Authorization: `Bearer ${accessToken}` },
     },
   );
@@ -149,8 +161,8 @@ async function fetchNowPlaying(): Promise<NowPlayingResponse> {
     throw new Error(`Spotify recent tracks failed: ${recentRes.status}`);
   }
 
-  const recentData: SpotifyRecentResponse = await recentRes.json();
-  const recent = recentData.items[0];
+  const recentData = await readJsonOrNull<SpotifyRecentResponse>(recentRes);
+  const recent = recentData?.items[0];
 
   if (!recent) {
     return { track: null };
@@ -180,7 +192,11 @@ export async function GET() {
   }
 
   try {
-    const data = await fetchNowPlaying();
+    pendingNowPlaying ??= fetchNowPlaying().finally(() => {
+      pendingNowPlaying = null;
+    });
+
+    const data = await pendingNowPlaying;
     cachedNowPlaying = { data, expiresAt: now + NOW_PLAYING_CACHE_MS };
     return nowPlayingJson(data);
   } catch (err) {
