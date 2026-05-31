@@ -24,6 +24,10 @@ export function useNowPlaying(): NowPlayingData {
   useEffect(() => {
     let mounted = true;
 
+    const invalidatePendingEvent = () => {
+      eventSequenceRef.current += 1;
+    };
+
     const applyNowPlaying = async (json: NowPlayingResponse) => {
       const eventSequence = ++eventSequenceRef.current;
 
@@ -75,6 +79,7 @@ export function useNowPlaying(): NowPlayingData {
       try {
         void applyNowPlaying(JSON.parse(event.data) as NowPlayingResponse);
       } catch (err) {
+        invalidatePendingEvent();
         setData((prev) => ({
           ...prev,
           isLoading: false,
@@ -85,6 +90,7 @@ export function useNowPlaying(): NowPlayingData {
 
     events.addEventListener("spotify-error", (event) => {
       if (!mounted) return;
+      invalidatePendingEvent();
 
       let message = "Failed to fetch Spotify now playing";
       try {
@@ -103,6 +109,7 @@ export function useNowPlaying(): NowPlayingData {
 
     events.addEventListener("error", () => {
       if (!mounted) return;
+      invalidatePendingEvent();
       setData((prev) => ({
         ...prev,
         isLoading: false,

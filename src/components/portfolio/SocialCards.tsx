@@ -466,6 +466,11 @@ function NowPlayingContent({
   const title = isLoading ? "Loading Spotify" : (track?.title ?? "Not playing");
   const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
   const artUrl = track?.albumArtUrl;
+  const [hasArtError, setHasArtError] = useState(false);
+
+  useLayoutEffect(() => {
+    setHasArtError(false);
+  }, [artUrl]);
 
   return (
     <div className="flex min-h-0 flex-1 items-center gap-3">
@@ -475,13 +480,14 @@ function NowPlayingContent({
       >
         {isLoading ? (
           <LoadingAlbumArt />
-        ) : artUrl ? (
+        ) : artUrl && !hasArtError ? (
           <Image
             alt={`${track?.album ?? "Spotify"} album art`}
             className="object-cover"
             fill
             sizes="183px"
             src={artUrl}
+            onError={() => setHasArtError(true)}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-white/5 px-3 text-center text-xs font-light text-white/70">
