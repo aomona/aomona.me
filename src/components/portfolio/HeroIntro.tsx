@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
-import { figmaAssets } from "./assets";
 
 export function HeroIntro() {
   const ref = useRef<HTMLElement>(null);
@@ -32,7 +31,7 @@ export function HeroIntro() {
           className="size-41 rounded-full object-cover shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
           height={164}
           priority
-          src={figmaAssets.avatar}
+          src="https://github.com/aomona.png"
           width={164}
         />
         <div className="leading-none">

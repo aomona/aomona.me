@@ -22,7 +22,7 @@ export function PortfolioShell({
   osuProfile: OsuProfile;
   tetrioProfile: TetrioProfile;
 }) {
-  const { track, colors, isLoading } = useNowPlaying(30000);
+  const { track, colors, isLoading } = useNowPlaying();
 
   return (
     <WebGLGrainGradient

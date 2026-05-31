@@ -19,7 +19,6 @@ import {
   useState,
 } from "react";
 import gsap from "gsap";
-import { figmaAssets } from "./assets";
 
 type CardGradient = {
   baseColor: string;
@@ -405,7 +404,13 @@ function GitHubCard({
     >
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-w-0 flex-1 flex-col justify-between">
-          <Image alt="GitHub" className="size-12" height={55} src={figmaAssets.github} width={55} />
+          <Image
+            alt="GitHub"
+            className="size-12"
+            height={55}
+            src="/logo/GitHub_Invertocat_White.svg"
+            width={55}
+          />
           <p className="whitespace-nowrap text-xl font-medium leading-tight sm:text-2xl">@aomona</p>
         </div>
         <ContributionGrid contributions={contributions} />
@@ -460,7 +465,12 @@ function NowPlayingContent({
       : "Spotify";
   const title = isLoading ? "Loading Spotify" : (track?.title ?? "Not playing");
   const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
-  const artUrl = track?.albumArtUrl || figmaAssets.album;
+  const artUrl = track?.albumArtUrl;
+  const [hasArtError, setHasArtError] = useState(false);
+
+  useLayoutEffect(() => {
+    setHasArtError(false);
+  }, [artUrl]);
 
   return (
     <div className="flex min-h-0 flex-1 items-center gap-3">
@@ -470,14 +480,19 @@ function NowPlayingContent({
       >
         {isLoading ? (
           <LoadingAlbumArt />
-        ) : (
+        ) : artUrl && !hasArtError ? (
           <Image
-            alt={track ? `${track.album} album art` : "Album artwork unavailable"}
+            alt={`${track?.album ?? "Spotify"} album art`}
             className="object-cover"
             fill
             sizes="183px"
             src={artUrl}
+            onError={() => setHasArtError(true)}
           />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-white/5 px-3 text-center text-xs font-light text-white/70">
+            Failed to load artwork
+          </div>
         )}
       </div>
       <div className="flex min-h-0 min-w-0 flex-1 self-stretch flex-col justify-between">
@@ -487,7 +502,7 @@ function NowPlayingContent({
             alt="Spotify"
             className="size-9 drop-shadow-[0_8px_20px_rgba(30,215,96,0.28)] sm:size-10"
             height={42}
-            src={figmaAssets.spotify}
+            src="/logo/Spotify_Primary_Logo_RGB_White.png"
             width={42}
           />
         </div>
@@ -726,7 +741,7 @@ function OsuIcon() {
         alt=""
         className="absolute inset-0 size-full"
         height={55}
-        src={figmaAssets.osu}
+        src="/logo/osu.svg"
         width={55}
       />
     </div>
@@ -835,7 +850,7 @@ export function SocialCards({
               alt="Discord"
               className="size-full"
               height={55}
-              src={figmaAssets.discord}
+              src="/logo/Discord-Symbol-White.svg"
               width={55}
             />
           }
@@ -846,7 +861,7 @@ export function SocialCards({
         <ServiceCard
           ariaLabel="Open X profile"
           gradient={gradients.x}
-          icon={<Image alt="X" className="size-full" height={55} src={figmaAssets.x} width={55} />}
+          icon={<Image alt="X" className="size-full" height={55} src="/logo/x.svg" width={55} />}
           title="@aomona_"
           userAgent={userAgent}
           onClick={() => openUrl(X_URL)}
@@ -871,7 +886,7 @@ export function SocialCards({
               alt="Nostr"
               className="size-full"
               height={55}
-              src={figmaAssets.nostr}
+              src="/logo/nostr-icon-white-transparent.svg"
               width={55}
             />
           }
@@ -897,7 +912,7 @@ export function SocialCards({
               alt="TETR.IO"
               className="size-full"
               height={55}
-              src={figmaAssets.tetrio}
+              src="/logo/tetrio-mono.svg"
               width={55}
             />
           }
@@ -910,7 +925,13 @@ export function SocialCards({
           ariaLabel="Open VRChat profile"
           gradient={gradients.vrchat}
           icon={
-            <Image alt="VRChat" className="w-20" height={40} src={figmaAssets.vrchat} width={80} />
+            <Image
+              alt="VRChat"
+              className="w-20"
+              height={40}
+              src="/logo/VRChat Logo Outline White.svg"
+              width={80}
+            />
           }
           iconClassName="w-20 self-start"
           title="あおもな"
