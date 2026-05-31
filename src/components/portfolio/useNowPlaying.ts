@@ -10,7 +10,7 @@ export type NowPlayingData = {
   error: string | null;
 };
 
-export function useNowPlaying(pollIntervalMs = 30000): NowPlayingData {
+export function useNowPlaying(): NowPlayingData {
   const [data, setData] = useState<NowPlayingData>({
     track: null,
     colors: null,
@@ -19,22 +19,15 @@ export function useNowPlaying(pollIntervalMs = 30000): NowPlayingData {
   });
   const lastArtUrl = useRef<string | null>(null);
   const colorsRef = useRef<string[] | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const eventSequenceRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchData = async () => {
-      if (abortRef.current) abortRef.current.abort();
-      abortRef.current = new AbortController();
+    const applyNowPlaying = async (json: NowPlayingResponse) => {
+      const eventSequence = ++eventSequenceRef.current;
 
       try {
-        const res = await fetch("/api/now-playing", {
-          signal: abortRef.current.signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json: NowPlayingResponse = await res.json();
-
         if (!mounted) return;
 
         const newTrack = json.track;
@@ -48,6 +41,8 @@ export function useNowPlaying(pollIntervalMs = 30000): NowPlayingData {
           } catch {
             newColors = null;
           }
+
+          if (!mounted || eventSequence !== eventSequenceRef.current) return;
         } else if (!artKey) {
           lastArtUrl.current = null;
           newColors = null;
@@ -63,8 +58,7 @@ export function useNowPlaying(pollIntervalMs = 30000): NowPlayingData {
           });
         }
       } catch (err) {
-        if (!mounted) return;
-        if (err instanceof Error && err.name === "AbortError") return;
+        if (!mounted || eventSequence !== eventSequenceRef.current) return;
         setData((prev) => ({
           ...prev,
           track: null,
@@ -75,15 +69,52 @@ export function useNowPlaying(pollIntervalMs = 30000): NowPlayingData {
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, pollIntervalMs);
+    const events = new EventSource("/api/now-playing");
+
+    events.addEventListener("now-playing", (event) => {
+      try {
+        void applyNowPlaying(JSON.parse(event.data) as NowPlayingResponse);
+      } catch (err) {
+        setData((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: err instanceof Error ? err.message : "Invalid Spotify event",
+        }));
+      }
+    });
+
+    events.addEventListener("spotify-error", (event) => {
+      if (!mounted) return;
+
+      let message = "Failed to fetch Spotify now playing";
+      try {
+        const eventData = JSON.parse(event.data) as { message?: string };
+        message = eventData.message ?? message;
+      } catch {
+        // Use default message.
+      }
+
+      setData((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: message,
+      }));
+    });
+
+    events.addEventListener("error", () => {
+      if (!mounted) return;
+      setData((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: "Spotify connection lost",
+      }));
+    });
 
     return () => {
       mounted = false;
-      clearInterval(interval);
-      abortRef.current?.abort();
+      events.close();
     };
-  }, [pollIntervalMs]);
+  }, []);
 
   return data;
 }
