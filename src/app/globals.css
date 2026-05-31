@@ -21,3 +21,29 @@ body {
 img {
   user-select: none;
 }
+
+@keyframes spotify-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(calc(var(--spotify-marquee-distance) * -1), 0, 0);
+  }
+}
+
+.spotify-marquee {
+  animation: spotify-marquee var(--spotify-marquee-duration, 10s) linear infinite alternate;
+  animation-play-state: paused;
+  will-change: transform;
+}
+
+.group:hover .spotify-marquee {
+  animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotify-marquee {
+    animation: none !important;
+  }
+}

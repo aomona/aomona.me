@@ -439,6 +439,95 @@ function LoadingAlbumArt() {
   );
 }
 
+function HoverMarqueeText({ className, text }: { className: string; text: string }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [scrollDistance, setScrollDistance] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useLayoutEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setPrefersReducedMotion(media.matches);
+
+    updateMotionPreference();
+
+    if (media.addEventListener) {
+      media.addEventListener("change", updateMotionPreference);
+    } else {
+      media.addListener(updateMotionPreference);
+    }
+
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener("change", updateMotionPreference);
+      } else {
+        media.removeListener(updateMotionPreference);
+      }
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (prefersReducedMotion) {
+      setScrollDistance(0);
+      return;
+    }
+
+    const update = () => {
+      const viewport = viewportRef.current;
+      const textEl = textRef.current;
+      if (!viewport || !textEl) return;
+
+      setScrollDistance(Math.max(0, textEl.scrollWidth - viewport.clientWidth));
+    };
+
+    update();
+
+    const viewport = viewportRef.current;
+    const textEl = textRef.current;
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+
+    if (viewport) resizeObserver?.observe(viewport);
+    if (textEl) resizeObserver?.observe(textEl);
+
+    window.addEventListener("resize", update);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [prefersReducedMotion, text]);
+
+  return (
+    <div ref={viewportRef} className={`relative min-w-0 flex-1 ${className}`}>
+      <p
+        ref={textRef}
+        className={`truncate opacity-100 transition-opacity duration-200 ${scrollDistance > 1 ? "group-hover:opacity-0" : ""}`}
+      >
+        {text}
+      </p>
+      {!prefersReducedMotion && scrollDistance > 1 ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 flex items-center overflow-hidden opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none"
+        >
+          <span
+            className="spotify-marquee inline-block whitespace-nowrap motion-reduce:animate-none"
+            style={
+              {
+                ["--spotify-marquee-distance" as "--spotify-marquee-distance"]: `${scrollDistance}px`,
+                ["--spotify-marquee-duration" as "--spotify-marquee-duration"]: `${Math.max(7, scrollDistance / 22)}s`,
+              } as CSSProperties
+            }
+          >
+            {text}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function getNowPlayingKey(track: SpotifyTrack | null, isLoading: boolean) {
   if (isLoading) return "loading";
   if (!track) return "empty";
@@ -506,9 +595,9 @@ function NowPlayingContent({
             width={42}
           />
         </div>
-        <div>
-          <p className="truncate text-xl font-medium">{title}</p>
-          <p className="truncate text-base font-light">{artist}</p>
+        <div className="min-w-0">
+          <HoverMarqueeText className="text-xl font-medium leading-tight" text={title} />
+          <HoverMarqueeText className="text-base font-light leading-tight" text={artist} />
         </div>
       </div>
     </div>
@@ -607,7 +696,7 @@ function NowPlayingCard({
 
   return (
     <GlassCard
-      className="col-span-2 aspect-2/1 md:aspect-auto"
+      className="group col-span-2 aspect-2/1 md:aspect-auto"
       gradient={playerGradient}
       backgroundTransitionKey={backgroundTransitionKey}
       overlay="bg-black/50"
