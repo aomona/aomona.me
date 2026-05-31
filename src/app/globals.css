@@ -23,14 +23,17 @@ img {
 }
 
 @keyframes spotify-marquee {
-  0%,
-  18% {
+  0% {
     transform: translate3d(0, 0, 0);
   }
 
-  82%,
-  100% {
+  40%,
+  60% {
     transform: translate3d(calc(var(--spotify-marquee-distance) * -1), 0, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -39,7 +42,7 @@ img {
 }
 
 .group:hover .spotify-marquee {
-  animation: spotify-marquee var(--spotify-marquee-duration, 10s) linear infinite alternate;
+  animation: spotify-marquee var(--spotify-marquee-duration, 10s) linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
