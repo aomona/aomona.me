@@ -46,7 +46,7 @@ export function PortfolioShell({
       fps={30}
     >
       <div className="relative z-10 min-h-dvh">
-        <main className="flex min-h-dvh items-center justify-center px-6 py-5 sm:px-10 lg:px-16">
+        <main className="flex min-h-dvh items-center justify-center px-6 pt-[104px] pb-8 sm:px-10 lg:px-16">
           <div className="flex w-full max-w-[1312px] flex-col items-center gap-10 lg:h-[calc(100dvh-40px)] lg:flex-row">
             <HeroIntro />
             <SocialCards
