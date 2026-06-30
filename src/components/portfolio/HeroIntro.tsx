@@ -35,12 +35,14 @@ export function HeroIntro() {
           width={164}
         />
         <div className="leading-none">
-          <h1 className="text-[clamp(4.5rem,9vw,8rem)] font-bold italic tracking-[-0.08em]">
+          <h1 className="text-[clamp(4.5rem,9vw,8rem)] font-bold italic tracking-[-0.08em] lg:text-[clamp(4rem,7.8vw,8rem)] xl:text-[clamp(4.5rem,9vw,8rem)]">
             AOMONA
           </h1>
           <div className="mt-3 leading-normal">
-            <p className="text-[clamp(2rem,3vw,2.5rem)] font-normal">High school developer</p>
-            <p className="text-[clamp(1.25rem,2vw,1.5rem)] font-normal">
+            <p className="text-[clamp(2rem,3vw,2.5rem)] font-normal lg:text-[clamp(1.75rem,2.6vw,2.5rem)] xl:text-[clamp(2rem,3vw,2.5rem)]">
+              High school developer
+            </p>
+            <p className="text-[clamp(1.25rem,2vw,1.5rem)] font-normal lg:text-[clamp(1.125rem,1.7vw,1.5rem)] xl:text-[clamp(1.25rem,2vw,1.5rem)]">
               building AI, web, and XR experiences.
             </p>
           </div>
