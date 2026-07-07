@@ -78,7 +78,7 @@ export function buildStatsDynamicEntries(
 
 async function getSpotifySafely(): Promise<NowPlayingResponse> {
   try {
-    return await getSpotifyNowPlaying();
+    return await getSpotifyNowPlaying({ cacheRecentForMs: 30000 });
   } catch (error) {
     console.error("Stats Spotify fetch failed:", error);
     return { track: null };
