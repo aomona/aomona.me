@@ -171,7 +171,7 @@ type RecentCache = {
 
 let lastRecentPlayed: RecentCache | null = null;
 
-export async function getSpotifyNowPlaying(options: { cacheRecentForMs?: number } = {}) {
+export async function getSpotifyNowPlaying(options: { cacheRecentForMs?: number } = {}): Promise<NowPlayingResponse> {
   const accessToken = await getAccessToken();
   const current = await fetchCurrentPlaying(accessToken);
   if (current?.track) return current;
