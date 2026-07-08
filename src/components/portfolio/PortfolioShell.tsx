@@ -22,7 +22,7 @@ export function PortfolioShell({
   osuProfile: OsuProfile;
   tetrioProfile: TetrioProfile;
 }) {
-  const { track, colors, isLoading } = useNowPlaying(30000);
+  const { track, colors, isLoading } = useNowPlaying();
 
   return (
     <WebGLGrainGradient
@@ -47,7 +47,7 @@ export function PortfolioShell({
     >
       <div className="relative z-10 min-h-dvh">
         <main className="flex min-h-dvh items-center justify-center px-6 pt-[104px] pb-8 sm:px-10 lg:px-16">
-          <div className="flex w-full max-w-[1312px] flex-col items-center gap-10 xl:h-[calc(100dvh-40px)] xl:flex-row">
+          <div className="flex w-full max-w-[1312px] flex-col items-center gap-10 min-[1141px]:h-[calc(100dvh-40px)] min-[1141px]:flex-row">
             <HeroIntro />
             <SocialCards
               userAgent={userAgent}

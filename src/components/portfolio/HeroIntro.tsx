@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
-import { figmaAssets } from "./assets";
 
 export function HeroIntro() {
   const ref = useRef<HTMLElement>(null);
@@ -32,16 +31,18 @@ export function HeroIntro() {
           className="size-41 rounded-full object-cover shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
           height={164}
           priority
-          src={figmaAssets.avatar}
+          src="https://github.com/aomona.png"
           width={164}
         />
         <div className="leading-none">
-          <h1 className="text-[clamp(4.5rem,9vw,8rem)] font-bold italic tracking-[-0.08em]">
+          <h1 className="text-[clamp(4.5rem,9vw,8rem)] font-bold italic tracking-[-0.08em] lg:text-[clamp(4rem,7.8vw,8rem)] xl:text-[clamp(4.5rem,9vw,8rem)]">
             AOMONA
           </h1>
           <div className="mt-3 leading-normal">
-            <p className="text-[clamp(2rem,3vw,2.5rem)] font-normal">High school developer</p>
-            <p className="text-[clamp(1.25rem,2vw,1.5rem)] font-normal">
+            <p className="text-[clamp(2rem,3vw,2.5rem)] font-normal lg:text-[clamp(1.75rem,2.6vw,2.5rem)] xl:text-[clamp(2rem,3vw,2.5rem)]">
+              High school developer
+            </p>
+            <p className="text-[clamp(1.25rem,2vw,1.5rem)] font-normal lg:text-[clamp(1.125rem,1.7vw,1.5rem)] xl:text-[clamp(1.25rem,2vw,1.5rem)]">
               building AI, web, and XR experiences.
             </p>
           </div>

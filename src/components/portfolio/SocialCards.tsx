@@ -19,7 +19,6 @@ import {
   useState,
 } from "react";
 import gsap from "gsap";
-import { figmaAssets } from "./assets";
 
 type CardGradient = {
   baseColor: string;
@@ -405,7 +404,13 @@ function GitHubCard({
     >
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-w-0 flex-1 flex-col justify-between">
-          <Image alt="GitHub" className="size-12" height={55} src={figmaAssets.github} width={55} />
+          <Image
+            alt="GitHub"
+            className="size-12"
+            height={55}
+            src="/logo/GitHub_Invertocat_White.svg"
+            width={55}
+          />
           <p className="whitespace-nowrap text-xl font-medium leading-tight sm:text-2xl">@aomona</p>
         </div>
         <ContributionGrid contributions={contributions} />
@@ -430,6 +435,98 @@ function LoadingAlbumArt() {
       <div className="absolute inset-4 rounded-full border border-white/15" />
       <div className="absolute inset-9 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
       <div className="absolute inset-1/2 size-3 -translate-1/2 rounded-full bg-white/70" />
+    </div>
+  );
+}
+
+function HoverMarqueeText({ className, text }: { className: string; text: string }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [scrollDistance, setScrollDistance] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useLayoutEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setPrefersReducedMotion(media.matches);
+
+    updateMotionPreference();
+
+    if (media.addEventListener) {
+      media.addEventListener("change", updateMotionPreference);
+    } else {
+      media.addListener(updateMotionPreference);
+    }
+
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener("change", updateMotionPreference);
+      } else {
+        media.removeListener(updateMotionPreference);
+      }
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (prefersReducedMotion) {
+      setScrollDistance(0);
+      return;
+    }
+
+    const update = () => {
+      const viewport = viewportRef.current;
+      const textEl = textRef.current;
+      if (!viewport || !textEl) return;
+
+      setScrollDistance(Math.max(0, textEl.scrollWidth - viewport.clientWidth));
+    };
+
+    update();
+
+    const viewport = viewportRef.current;
+    const textEl = textRef.current;
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+
+    if (viewport) resizeObserver?.observe(viewport);
+    if (textEl) resizeObserver?.observe(textEl);
+
+    window.addEventListener("resize", update);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [prefersReducedMotion, text]);
+
+  return (
+    <div ref={viewportRef} className={`relative min-w-0 flex-1 ${className}`}>
+      <p
+        ref={textRef}
+        className={`truncate opacity-100 transition-opacity duration-200 ${scrollDistance > 1 ? "group-hover:opacity-0" : ""}`}
+      >
+        {text}
+      </p>
+      {!prefersReducedMotion && scrollDistance > 1 ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 flex items-center overflow-hidden opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none"
+        >
+          <span
+            className="spotify-marquee inline-block whitespace-nowrap motion-reduce:animate-none"
+            style={(() => {
+              const travelDuration = Math.max(3, scrollDistance / 40);
+
+              return {
+                ["--spotify-marquee-distance" as "--spotify-marquee-distance"]: `${scrollDistance}px`,
+                ["--spotify-marquee-start-duration" as "--spotify-marquee-start-duration"]: `${travelDuration * 2 + 2}s`,
+                ["--spotify-marquee-loop-duration" as "--spotify-marquee-loop-duration"]: `${travelDuration * 2 + 4}s`,
+              } as CSSProperties;
+            })()}
+          >
+            {text}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -460,7 +557,12 @@ function NowPlayingContent({
       : "Spotify";
   const title = isLoading ? "Loading Spotify" : (track?.title ?? "Not playing");
   const artist = isLoading ? "Fetching track" : (track?.artist ?? "Track unavailable");
-  const artUrl = track?.albumArtUrl || figmaAssets.album;
+  const artUrl = track?.albumArtUrl;
+  const [hasArtError, setHasArtError] = useState(false);
+
+  useLayoutEffect(() => {
+    setHasArtError(false);
+  }, [artUrl]);
 
   return (
     <div className="flex min-h-0 flex-1 items-center gap-3">
@@ -470,14 +572,19 @@ function NowPlayingContent({
       >
         {isLoading ? (
           <LoadingAlbumArt />
-        ) : (
+        ) : artUrl && !hasArtError ? (
           <Image
-            alt={track ? `${track.album} album art` : "Album artwork unavailable"}
+            alt={`${track?.album ?? "Spotify"} album art`}
             className="object-cover"
             fill
             sizes="183px"
             src={artUrl}
+            onError={() => setHasArtError(true)}
           />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-white/5 px-3 text-center text-xs font-light text-white/70">
+            Failed to load artwork
+          </div>
         )}
       </div>
       <div className="flex min-h-0 min-w-0 flex-1 self-stretch flex-col justify-between">
@@ -487,13 +594,13 @@ function NowPlayingContent({
             alt="Spotify"
             className="size-9 drop-shadow-[0_8px_20px_rgba(30,215,96,0.28)] sm:size-10"
             height={42}
-            src={figmaAssets.spotify}
+            src="/logo/Spotify_Primary_Logo_RGB_White.png"
             width={42}
           />
         </div>
-        <div>
-          <p className="truncate text-xl font-medium">{title}</p>
-          <p className="truncate text-base font-light">{artist}</p>
+        <div className="min-w-0">
+          <HoverMarqueeText className="text-xl font-medium leading-tight" text={title} />
+          <HoverMarqueeText className="text-base font-light leading-tight" text={artist} />
         </div>
       </div>
     </div>
@@ -592,7 +699,7 @@ function NowPlayingCard({
 
   return (
     <GlassCard
-      className="col-span-2 aspect-2/1 md:aspect-auto"
+      className="group col-span-2 aspect-2/1 md:aspect-auto"
       gradient={playerGradient}
       backgroundTransitionKey={backgroundTransitionKey}
       overlay="bg-black/50"
@@ -726,7 +833,7 @@ function OsuIcon() {
         alt=""
         className="absolute inset-0 size-full"
         height={55}
-        src={figmaAssets.osu}
+        src="/logo/osu.svg"
         width={55}
       />
     </div>
@@ -835,7 +942,7 @@ export function SocialCards({
               alt="Discord"
               className="size-full"
               height={55}
-              src={figmaAssets.discord}
+              src="/logo/Discord-Symbol-White.svg"
               width={55}
             />
           }
@@ -846,7 +953,7 @@ export function SocialCards({
         <ServiceCard
           ariaLabel="Open X profile"
           gradient={gradients.x}
-          icon={<Image alt="X" className="size-full" height={55} src={figmaAssets.x} width={55} />}
+          icon={<Image alt="X" className="size-full" height={55} src="/logo/x.svg" width={55} />}
           title="@aomona_"
           userAgent={userAgent}
           onClick={() => openUrl(X_URL)}
@@ -871,7 +978,7 @@ export function SocialCards({
               alt="Nostr"
               className="size-full"
               height={55}
-              src={figmaAssets.nostr}
+              src="/logo/nostr-icon-white-transparent.svg"
               width={55}
             />
           }
@@ -897,7 +1004,7 @@ export function SocialCards({
               alt="TETR.IO"
               className="size-full"
               height={55}
-              src={figmaAssets.tetrio}
+              src="/logo/tetrio-mono.svg"
               width={55}
             />
           }
@@ -910,7 +1017,13 @@ export function SocialCards({
           ariaLabel="Open VRChat profile"
           gradient={gradients.vrchat}
           icon={
-            <Image alt="VRChat" className="w-20" height={40} src={figmaAssets.vrchat} width={80} />
+            <Image
+              alt="VRChat"
+              className="w-20"
+              height={40}
+              src="/logo/VRChat Logo Outline White.svg"
+              width={80}
+            />
           }
           iconClassName="w-20 self-start"
           title="あおもな"
