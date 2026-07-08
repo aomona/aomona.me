@@ -6,7 +6,7 @@
       "name": "aomona.me",
       "dependencies": {
         "@gsap/react": "^2.1.2",
-        "grain-gradient": "^1.2.0",
+        "grain-gradient": "^2.0.0",
         "gsap": "^3.15.0",
         "lucide-react": "^1.16.0",
         "next": "16.2.6",
@@ -280,7 +280,7 @@
 
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
 
-    "grain-gradient": ["grain-gradient@1.2.0", "", { "peerDependencies": { "react": ">=18" } }, "sha512-ngFiA3S6IJ4dGNZAUXCVY7yyFJ6Ll7dzPjPDVGKDWk7YOLDFBejMGIitDdI5et23Pi4et9mSc89VkMx1xYqgXA=="],
+    "grain-gradient": ["grain-gradient@2.0.0", "", { "peerDependencies": { "react": ">=18" } }, "sha512-3pBtY/IQcgae9ob0gjsxBawdlESOFp+EQ4CZUKYE7xlO9FfBy+tg8VT6wzyS9sBQ8Zhw1OANdjZhO9l1LcwvjQ=="],
 
     "gsap": ["gsap@3.15.0", "", {}, "sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A=="],
 
