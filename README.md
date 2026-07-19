@@ -36,8 +36,8 @@ Type checking intentionally uses `tsgo` only. `tsc --noEmit` is not part of the 
 
 ## Tooling policy
 
-* Oxlint owns linting.
-* Oxfmt owns formatting.
-* tsgo owns type checking.
-* Next.js telemetry is disabled with `NEXT_TELEMETRY_DISABLED=1`.
-* CI runs `bun run check` on pushes to `main` and pull requests.
+- Oxlint owns linting.
+- Oxfmt owns formatting.
+- tsgo owns type checking.
+- Next.js telemetry is disabled with `NEXT_TELEMETRY_DISABLED=1`.
+- CI runs `bun run check` on pushes to `main` and pull requests.
