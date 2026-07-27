@@ -9,30 +9,12 @@ import type { SpotifyTrack } from "@/lib/spotify";
 import { GrainGradient } from "grain-gradient/react";
 import { Cloud, CloudRain, CloudSun, Snowflake, Sun } from "lucide-react";
 import Image from "next/image";
-import {
-  type CSSProperties,
-  type ReactNode,
-  type RefObject,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, type RefObject, useLayoutEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 
 type CardGradient = {
   baseColor: string;
   colors: string[];
-  seed: number;
-  frequency?: number;
-  contrast?: number;
-  opacity?: number;
-  numOctaves?: number;
-  size?: number;
-  stitchTiles?: boolean;
-  blendMode?: CSSProperties["mixBlendMode"];
-  saturation?: number;
-  blur?: number;
 };
 
 type CardProps = {
@@ -41,7 +23,6 @@ type CardProps = {
   backgroundTransitionKey?: string;
   overlay?: string;
   children: ReactNode;
-  userAgent: string | null;
   onClick?: () => void;
   ariaLabel?: string;
 };
@@ -49,89 +30,42 @@ type CardProps = {
 const cardBase =
   "relative isolate flex flex-col overflow-hidden rounded-[34px] border border-black/15 p-4 shadow-[3px_4px_20px_-2px_rgba(0,0,0,0.25)] sm:p-6";
 
-const cardGrainDefaults = {
-  numOctaves: 2,
-  size: 1100,
-  stitchTiles: true,
-} satisfies Pick<CardGradient, "numOctaves" | "size" | "stitchTiles">;
-
 const gradients = {
   github: {
     baseColor: "#0d0d0d",
     colors: ["#050505", "#151515", "#3b3b3b", "#0a0a0a"],
-    seed: 11,
-    frequency: 0.82,
-    contrast: 1.28,
-    opacity: 0.24,
-    saturation: 0.78,
   },
   discord: {
     baseColor: "#5865f2",
     colors: ["#5865f2", "#7c3aed", "#3b82f6", "#a78bfa"],
-    seed: 23,
-    frequency: 0.72,
-    contrast: 1.24,
-    opacity: 0.2,
   },
   x: {
     baseColor: "#101010",
     colors: ["#050505", "#262626", "#4b4b4b", "#111111"],
-    seed: 31,
-    frequency: 0.84,
-    contrast: 1.3,
-    opacity: 0.23,
-    saturation: 0.75,
   },
   player: {
     baseColor: "#132325",
     colors: ["#1e3a3a", "#455a5d", "#0b1416", "#2f4242"],
-    seed: 43,
-    frequency: 0.7,
-    contrast: 1.22,
-    opacity: 0.2,
-    saturation: 0.82,
   },
   weather: {
     baseColor: "#101010",
     colors: ["#070707", "#242424", "#454545", "#101010"],
-    seed: 59,
-    frequency: 0.78,
-    contrast: 1.26,
-    opacity: 0.22,
-    saturation: 0.78,
   },
   nostr: {
     baseColor: "#6d0bc5",
     colors: ["#f000b8", "#7c3aed", "#2f1a87", "#c500d6"],
-    seed: 67,
-    frequency: 0.76,
-    contrast: 1.28,
-    opacity: 0.22,
   },
   osu: {
     baseColor: "#c83f79",
     colors: ["#ff6aa5", "#d9467c", "#9f2b5d", "#ffd1dc"],
-    seed: 71,
-    frequency: 0.74,
-    contrast: 1.24,
-    opacity: 0.22,
   },
   tetrio: {
     baseColor: "#2d3ccf",
     colors: ["#5747df", "#2637c7", "#7c3aed", "#38bdf8"],
-    seed: 83,
-    frequency: 0.74,
-    contrast: 1.25,
-    opacity: 0.21,
   },
   vrchat: {
     baseColor: "#d97706",
     colors: ["#f59e0b", "#facc15", "#b45309", "#fef3c7"],
-    seed: 97,
-    frequency: 0.68,
-    contrast: 1.18,
-    opacity: 0.22,
-    saturation: 1.02,
   },
 } satisfies Record<string, CardGradient>;
 
@@ -217,7 +151,6 @@ function GlassCard({
   backgroundTransitionKey,
   overlay = "bg-black/15",
   children,
-  userAgent,
   onClick,
   ariaLabel,
 }: CardProps) {
@@ -292,10 +225,7 @@ function GlassCard({
 
   return (
     <GrainGradient
-      {...cardGrainDefaults}
       {...gradient}
-      androidCanvasFallback="auto"
-      androidCanvasFallbackUserAgent={userAgent}
       className={`${cardBase} ${className} ${onClick ? "cursor-pointer" : ""}`}
       style={{ backgroundColor: gradient.baseColor }}
     >
@@ -320,7 +250,6 @@ function ServiceCard({
   icon,
   title,
   subtitle,
-  userAgent,
   iconClassName = "size-9",
   onClick,
   ariaLabel,
@@ -330,7 +259,6 @@ function ServiceCard({
   icon: ReactNode;
   title: string;
   subtitle?: string;
-  userAgent: string | null;
   iconClassName?: string;
   onClick?: () => void;
   ariaLabel?: string;
@@ -340,7 +268,6 @@ function ServiceCard({
       ariaLabel={ariaLabel}
       className={`aspect-square ${className}`}
       gradient={gradient}
-      userAgent={userAgent}
       onClick={onClick}
     >
       <div className="flex min-h-0 flex-1 flex-col justify-between">
@@ -386,11 +313,9 @@ function ContributionGrid({ contributions }: { contributions: GitHubContribution
 }
 
 function GitHubCard({
-  userAgent,
   contributions,
   onClick,
 }: {
-  userAgent: string | null;
   contributions: GitHubContributions;
   onClick?: () => void;
 }) {
@@ -399,7 +324,6 @@ function GitHubCard({
       ariaLabel="Open GitHub profile"
       className="col-span-2 aspect-2/1 md:aspect-auto"
       gradient={gradients.github}
-      userAgent={userAgent}
       onClick={onClick}
     >
       <div className="flex min-h-0 flex-1 gap-3">
@@ -520,7 +444,7 @@ function HoverMarqueeText({ className, text }: { className: string; text: string
                 ["--spotify-marquee-distance" as "--spotify-marquee-distance"]: `${scrollDistance}px`,
                 ["--spotify-marquee-start-duration" as "--spotify-marquee-start-duration"]: `${travelDuration * 2 + 2}s`,
                 ["--spotify-marquee-loop-duration" as "--spotify-marquee-loop-duration"]: `${travelDuration * 2 + 4}s`,
-              } as CSSProperties;
+              } as import("react").CSSProperties;
             })()}
           >
             {text}
@@ -608,13 +532,11 @@ function NowPlayingContent({
 }
 
 function NowPlayingCard({
-  userAgent,
   track,
   colors,
   isLoading,
   onClick,
 }: {
-  userAgent: string | null;
   track: SpotifyTrack | null;
   colors: string[] | null;
   isLoading: boolean;
@@ -703,7 +625,6 @@ function NowPlayingCard({
       gradient={playerGradient}
       backgroundTransitionKey={backgroundTransitionKey}
       overlay="bg-black/50"
-      userAgent={userAgent}
       onClick={onClick}
       ariaLabel={track ? `Open Spotify track: ${title} by ${artist}` : "Open Spotify"}
     >
@@ -741,15 +662,7 @@ function formatCurrentTemp(value: number | null) {
   return `${Number.isInteger(value) ? value : value.toFixed(1)}°C`;
 }
 
-function WeatherCard({
-  userAgent,
-  weather,
-  onClick,
-}: {
-  userAgent: string | null;
-  weather: NagoyaWeather;
-  onClick?: () => void;
-}) {
+function WeatherCard({ weather, onClick }: { weather: NagoyaWeather; onClick?: () => void }) {
   const current = weather.current;
   const observedDate = current?.observedAt.slice(0, 10);
   const needsToday = Boolean(observedDate) && weather.weekly[0]?.date !== observedDate;
@@ -774,7 +687,6 @@ function WeatherCard({
       className="col-span-2 aspect-2/1 md:aspect-auto"
       gradient={gradients.weather}
       overlay="bg-black/20"
-      userAgent={userAgent}
       onClick={onClick}
       ariaLabel="Open Nagoya weather search"
     >
@@ -849,7 +761,6 @@ function openUrl(url: string) {
 }
 
 export function SocialCards({
-  userAgent,
   weather,
   track,
   colors,
@@ -858,7 +769,6 @@ export function SocialCards({
   osuProfile,
   tetrioProfile,
 }: {
-  userAgent: string | null;
   weather: NagoyaWeather;
   track: SpotifyTrack | null;
   colors: string[] | null;
@@ -929,11 +839,7 @@ export function SocialCards({
         ref={gridRef}
         className="grid w-full max-w-92 shrink-0 grid-cols-2 gap-3 md:aspect-3/4 md:max-w-140 md:grid-cols-3 md:grid-rows-4"
       >
-        <GitHubCard
-          userAgent={userAgent}
-          contributions={githubContributions}
-          onClick={() => openUrl(GITHUB_URL)}
-        />
+        <GitHubCard contributions={githubContributions} onClick={() => openUrl(GITHUB_URL)} />
         <ServiceCard
           ariaLabel="Open Discord community"
           gradient={gradients.discord}
@@ -947,7 +853,6 @@ export function SocialCards({
             />
           }
           title="community"
-          userAgent={userAgent}
           onClick={() => openUrl(DISCORD_URL)}
         />
         <ServiceCard
@@ -955,21 +860,15 @@ export function SocialCards({
           gradient={gradients.x}
           icon={<Image alt="X" className="size-full" height={55} src="/logo/x.svg" width={55} />}
           title="@aomona_"
-          userAgent={userAgent}
           onClick={() => openUrl(X_URL)}
         />
         <NowPlayingCard
-          userAgent={userAgent}
           track={track}
           colors={colors}
           isLoading={isLoading}
           onClick={() => openUrl(track?.trackUrl ?? SPOTIFY_URL)}
         />
-        <WeatherCard
-          userAgent={userAgent}
-          weather={weather}
-          onClick={() => openUrl(WEATHER_SEARCH_URL)}
-        />
+        <WeatherCard weather={weather} onClick={() => openUrl(WEATHER_SEARCH_URL)} />
         <ServiceCard
           ariaLabel="Copy Nostr profile"
           gradient={gradients.nostr}
@@ -984,7 +883,6 @@ export function SocialCards({
           }
           iconClassName="size-10"
           title="nostr"
-          userAgent={userAgent}
           onClick={() => copyToClipboard(NOSTR_NPROFILE, () => showToast("nprofile copied!"))}
         />
         <ServiceCard
@@ -993,7 +891,6 @@ export function SocialCards({
           icon={<OsuIcon />}
           title="@aomona"
           subtitle={formatOsuPp(osuProfile.pp)}
-          userAgent={userAgent}
           onClick={() => openUrl(OSU_URL)}
         />
         <ServiceCard
@@ -1010,7 +907,6 @@ export function SocialCards({
           }
           title="@aomona"
           subtitle={getTetrioDisplay(tetrioProfile)}
-          userAgent={userAgent}
           onClick={() => openUrl(TETRIO_URL)}
         />
         <ServiceCard
@@ -1027,7 +923,6 @@ export function SocialCards({
           }
           iconClassName="w-20 self-start"
           title="あおもな"
-          userAgent={userAgent}
           onClick={() => openUrl(VRCHAT_URL)}
         />
       </div>
