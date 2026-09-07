@@ -714,6 +714,13 @@ function NowPlayingCard({
 
 function WeatherIcon({ className, kind }: { className: string; kind: WeatherKind }) {
   switch (kind) {
+    case "unknown":
+      return (
+        <span className={`${className} inline-flex items-center justify-center`}>
+          <span aria-hidden="true">—</span>
+          <span className="sr-only">Weather unavailable</span>
+        </span>
+      );
     case "cloudy":
       return <CloudSun aria-hidden className={className} strokeWidth={2.2} />;
     case "rainy":
@@ -751,23 +758,7 @@ function WeatherCard({
   onClick?: () => void;
 }) {
   const current = weather.current;
-  const observedDate = current?.observedAt.slice(0, 10);
-  const needsToday = Boolean(observedDate) && weather.weekly[0]?.date !== observedDate;
-  const forecastDays = needsToday
-    ? [
-        {
-          date: observedDate!,
-          highC: current?.highC ?? current?.temperatureC ?? null,
-          kind: current?.kind ?? "sunny",
-          label: "Today",
-          lowC: current?.lowC ?? current?.temperatureC ?? null,
-        },
-        ...weather.weekly.slice(0, 5),
-      ]
-    : weather.weekly.slice(0, 6).map((day, index) => ({
-        ...day,
-        label: index === 0 ? "Today" : day.label,
-      }));
+  const forecastDays = weather.weekly.slice(0, 6);
 
   return (
     <GlassCard
