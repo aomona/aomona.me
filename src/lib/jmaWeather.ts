@@ -22,7 +22,7 @@ const dayFormatter = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
 });
 
-export type WeatherKind = "sunny" | "cloudy" | "rainy" | "snowy";
+export type WeatherKind = "sunny" | "cloudy" | "rainy" | "snowy" | "unknown";
 
 export type NagoyaCurrentWeather = {
   condition: string;
@@ -98,40 +98,49 @@ export const unavailableNagoyaWeather: NagoyaWeather = {
   weekly: [],
 };
 
-export async function getNagoyaWeather(): Promise<NagoyaWeather> {
+export async function getNagoyaWeather(now = new Date()): Promise<NagoyaWeather> {
   try {
-    return await fetchNagoyaWeather();
+    return await fetchNagoyaWeather(now);
   } catch (e) {
     console.error("JMA fetch failed:", e);
     return unavailableNagoyaWeather;
   }
 }
 
-async function fetchNagoyaWeather(): Promise<NagoyaWeather> {
-  const [latestTime, forecast] = await Promise.all([
-    fetchLatestAmedasTime(),
+async function fetchNagoyaWeather(now: Date): Promise<NagoyaWeather> {
+  // Observation and forecast endpoints can fail independently.
+  const [observationResult, forecastResult] = await Promise.allSettled([
+    fetchLatestObservation(),
     fetchJmaJson<ForecastReport[]>(
       `${JMA_BASE_URL}/forecast/data/forecast/${FORECAST_OFFICE_CODE}.json`,
       1800,
     ),
   ]);
-  const amedasMap = await fetchJmaJson<Record<string, AmedasObservation>>(
-    `${JMA_BASE_URL}/amedas/data/map/${toAmedasMapTimestamp(latestTime)}.json`,
-    60,
-  );
-
-  const observation = amedasMap[AMEDAS_STATION_CODE];
-  const currentForecast = getCurrentForecast(forecast);
-  const current = observation
-    ? buildCurrentWeather(observation, latestTime, currentForecast)
+  const forecast = forecastResult.status === "fulfilled" ? forecastResult.value : [];
+  const latest = observationResult.status === "fulfilled" ? observationResult.value : null;
+  const current = latest?.observation
+    ? buildCurrentWeather(
+        latest.observation,
+        latest.latestTime,
+        getCurrentForecast(forecast, latest.latestTime),
+      )
     : null;
 
   return {
     current,
     forecastReportedAt: forecast[0]?.reportDatetime ?? null,
     sourceLabel: "JMA AMeDAS",
-    weekly: buildWeeklyForecast(forecast),
+    weekly: buildWeeklyForecast(forecast, now),
   };
+}
+
+async function fetchLatestObservation() {
+  const latestTime = await fetchLatestAmedasTime();
+  const map = await fetchJmaJson<Record<string, AmedasObservation>>(
+    `${JMA_BASE_URL}/amedas/data/map/${toAmedasMapTimestamp(latestTime)}.json`,
+    60,
+  );
+  return { latestTime, observation: map[AMEDAS_STATION_CODE] };
 }
 
 async function fetchLatestAmedasTime(): Promise<string> {
@@ -187,13 +196,16 @@ function buildCurrentWeather(
   };
 }
 
-function buildWeeklyForecast(forecast: ForecastReport[]): NagoyaWeeklyForecast[] {
+function buildWeeklyForecast(forecast: ForecastReport[], now: Date): NagoyaWeeklyForecast[] {
   const weeklyWeatherSeries = forecast[1]?.timeSeries?.[0];
   const weeklyTempSeries = forecast[1]?.timeSeries?.[1];
   const weeklyWeatherArea = findArea(weeklyWeatherSeries, WEEKLY_AREA_CODE);
   const weeklyTempArea = findArea(weeklyTempSeries, AMEDAS_STATION_CODE);
   const timeDefines = weeklyWeatherSeries?.timeDefines ?? [];
-  const shortTermTemps = getShortTermTemps(forecast[0]?.timeSeries?.[2]);
+  const shortTermTemps = getShortTermTemps(
+    forecast[0]?.timeSeries?.[2],
+    forecast[0]?.reportDatetime,
+  );
   const result: NagoyaWeeklyForecast[] = [];
 
   for (let index = 0; index < timeDefines.length && index < 7; index += 1) {
@@ -206,25 +218,64 @@ function buildWeeklyForecast(forecast: ForecastReport[]): NagoyaWeeklyForecast[]
     const weatherCode = weeklyWeatherArea?.weatherCodes?.[index] ?? "";
     const fallbackTemps = shortTermTemps.get(dateKey);
 
+    const tempIndex =
+      weeklyTempSeries?.timeDefines?.findIndex((time) => time.slice(0, 10) === dateKey) ?? -1;
     result.push({
       date: dateKey,
-      highC: parsedNumber(weeklyTempArea?.tempsMax?.[index]) ?? fallbackTemps?.highC ?? null,
+      highC: parsedNumber(weeklyTempArea?.tempsMax?.[tempIndex]) ?? fallbackTemps?.highC ?? null,
       kind: weatherKindFromCode(weatherCode),
       label: dayFormatter.format(new Date(date)).toUpperCase(),
-      lowC: parsedNumber(weeklyTempArea?.tempsMin?.[index]) ?? fallbackTemps?.lowC ?? null,
+      lowC: parsedNumber(weeklyTempArea?.tempsMin?.[tempIndex]) ?? fallbackTemps?.lowC ?? null,
       popPercent: parsedNumber(weeklyWeatherArea?.pops?.[index]),
       reliability: normalizedString(weeklyWeatherArea?.reliabilities?.[index]),
       weatherCode,
     });
   }
 
-  return result;
+  // Weekly data starts tomorrow. Include today's short-term forecast without
+  // inventing daily extremes from a single current-temperature observation.
+  const shortSeries = forecast[0]?.timeSeries?.[0];
+  const shortArea = findArea(shortSeries, FORECAST_AREA_CODE);
+  for (const [index, time] of (shortSeries?.timeDefines ?? []).entries()) {
+    const date = time.slice(0, 10);
+    if (result.some((day) => day.date === date)) continue;
+    const weatherCode = shortArea?.weatherCodes?.[index] ?? "";
+    const temps = shortTermTemps.get(date);
+    result.push({
+      date,
+      highC: temps?.highC ?? null,
+      lowC: temps?.lowC ?? null,
+      kind: weatherKindFromCode(weatherCode),
+      label: dayFormatter.format(new Date(time)).toUpperCase(),
+      popPercent: null,
+      reliability: null,
+      weatherCode,
+    });
+  }
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  return result
+    .filter((day) => day.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 7)
+    .map((day) => ({ ...day, label: day.date === today ? "Today" : day.label }));
 }
 
-function getCurrentForecast(forecast: ForecastReport[]): { condition: string; kind: WeatherKind } {
+function getCurrentForecast(
+  forecast: ForecastReport[],
+  observedAt: string,
+): { condition: string; kind: WeatherKind } {
   const currentSeries = forecast[0]?.timeSeries?.[0];
   const currentArea = findArea(currentSeries, FORECAST_AREA_CODE);
-  const weatherCode = currentArea?.weatherCodes?.[0] ?? "";
+  const index =
+    currentSeries?.timeDefines?.findIndex(
+      (time) => time.slice(0, 10) === observedAt.slice(0, 10),
+    ) ?? -1;
+  const weatherCode = currentArea?.weatherCodes?.[index] ?? "";
 
   return {
     condition: weatherConditionFromCode(weatherCode),
@@ -234,6 +285,7 @@ function getCurrentForecast(forecast: ForecastReport[]): { condition: string; ki
 
 function getShortTermTemps(
   series: ForecastTimeSeries | undefined,
+  reportedAt: string | undefined,
 ): Map<string, { highC: number | null; lowC: number | null }> {
   const area = findArea(series, AMEDAS_STATION_CODE);
   const timeDefines = series?.timeDefines ?? [];
@@ -252,13 +304,15 @@ function getShortTermTemps(
     }
 
     const dateKey = date.slice(0, 10);
-    const current = result.get(dateKey);
-    if (current) {
-      current.highC = current.highC === null ? value : Math.max(current.highC, value);
-      current.lowC = current.lowC === null ? value : Math.min(current.lowC, value);
-    } else {
-      result.set(dateKey, { highC: value, lowC: value });
+    const current = result.get(dateKey) ?? { highC: null, lowC: null };
+    // JMA uses 09:00 for daytime maximum and 00:00 for morning minimum.
+    // Same-day 00:00 can duplicate the maximum as a placeholder: no minimum
+    // forecast is available once that morning has passed.
+    if (date.slice(11, 16) === "09:00") current.highC = value;
+    if (date.slice(11, 16) === "00:00" && reportedAt && dateKey > reportedAt.slice(0, 10)) {
+      current.lowC = value;
     }
+    result.set(dateKey, current);
   }
 
   return result;
@@ -285,7 +339,7 @@ function observedNumber(value: unknown[] | undefined): number | null {
 }
 
 function parsedNumber(value: string | undefined): number | null {
-  if (!value) {
+  if (!value?.trim()) {
     return null;
   }
 
@@ -325,7 +379,9 @@ function weatherKindFromCode(code: string): WeatherKind {
       return "rainy";
     case "4":
       return "snowy";
-    default:
+    case "1":
       return "sunny";
+    default:
+      return "unknown";
   }
 }
