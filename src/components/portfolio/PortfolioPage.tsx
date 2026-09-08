@@ -5,13 +5,11 @@ import type { TetrioProfile } from "@/lib/tetrioProfile";
 import { PortfolioShell } from "./PortfolioShell";
 
 export function PortfolioPage({
-  userAgent,
   weather,
   githubContributions,
   osuProfile,
   tetrioProfile,
 }: {
-  userAgent: string | null;
   weather: NagoyaWeather;
   githubContributions: GitHubContributions;
   osuProfile: OsuProfile;
@@ -19,7 +17,6 @@ export function PortfolioPage({
 }) {
   return (
     <PortfolioShell
-      userAgent={userAgent}
       weather={weather}
       githubContributions={githubContributions}
       osuProfile={osuProfile}
