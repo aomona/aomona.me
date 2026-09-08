@@ -47,6 +47,7 @@ export type NagoyaWeeklyForecast = {
   popPercent: number | null;
   reliability: string | null;
   weatherCode: string;
+  temperatureNote?: string;
 };
 
 export type NagoyaWeather = {
@@ -130,17 +131,47 @@ async function fetchNagoyaWeather(now: Date): Promise<NagoyaWeather> {
     current,
     forecastReportedAt: forecast[0]?.reportDatetime ?? null,
     sourceLabel: "JMA AMeDAS",
-    weekly: buildWeeklyForecast(forecast, now),
+    weekly: buildWeeklyForecast(forecast, now, current),
   };
 }
 
 async function fetchLatestObservation() {
   const latestTime = await fetchLatestAmedasTime();
-  const map = await fetchJmaJson<Record<string, AmedasObservation>>(
-    `${JMA_BASE_URL}/amedas/data/map/${toAmedasMapTimestamp(latestTime)}.json`,
+  const [mapResult, extremesResult] = await Promise.allSettled([
+    fetchJmaJson<Record<string, AmedasObservation>>(
+      `${JMA_BASE_URL}/amedas/data/map/${toAmedasMapTimestamp(latestTime)}.json`,
+      60,
+    ),
+    fetchDailyExtremes(latestTime),
+  ]);
+  const observation =
+    mapResult.status === "fulfilled" ? mapResult.value[AMEDAS_STATION_CODE] : undefined;
+  const extremes = extremesResult.status === "fulfilled" ? extremesResult.value : undefined;
+  return {
+    latestTime,
+    observation: observation
+      ? { ...observation, maxTemp: extremes?.maxTemp, minTemp: extremes?.minTemp }
+      : undefined,
+  };
+}
+
+async function fetchDailyExtremes(latestTime: string): Promise<AmedasObservation | undefined> {
+  const timestamp = toAmedasMapTimestamp(latestTime);
+  const date = timestamp.slice(0, 8);
+  // The 00:00 record closes the preceding day, including its daily extremes.
+  if (timestamp.slice(8) === "000000") return undefined;
+  const blockHour = String(Math.floor(Number(timestamp.slice(8, 10)) / 3) * 3).padStart(2, "0");
+  const observations = await fetchJmaJson<Record<string, AmedasObservation>>(
+    `${JMA_BASE_URL}/amedas/data/point/${AMEDAS_STATION_CODE}/${date}_${blockHour}.json`,
     60,
   );
-  return { latestTime, observation: map[AMEDAS_STATION_CODE] };
+  // Match the map's observation time. An older record could miss a new extreme.
+  const observation = observations[timestamp];
+  if (!observation) return undefined;
+  return {
+    maxTemp: observation.maxTemp?.[1] === 0 ? observation.maxTemp : undefined,
+    minTemp: observation.minTemp?.[1] === 0 ? observation.minTemp : undefined,
+  };
 }
 
 async function fetchLatestAmedasTime(): Promise<string> {
@@ -196,7 +227,11 @@ function buildCurrentWeather(
   };
 }
 
-function buildWeeklyForecast(forecast: ForecastReport[], now: Date): NagoyaWeeklyForecast[] {
+function buildWeeklyForecast(
+  forecast: ForecastReport[],
+  now: Date,
+  current: NagoyaCurrentWeather | null,
+): NagoyaWeeklyForecast[] {
   const weeklyWeatherSeries = forecast[1]?.timeSeries?.[0];
   const weeklyTempSeries = forecast[1]?.timeSeries?.[1];
   const weeklyWeatherArea = findArea(weeklyWeatherSeries, WEEKLY_AREA_CODE);
@@ -258,6 +293,29 @@ function buildWeeklyForecast(forecast: ForecastReport[], now: Date): NagoyaWeekl
     month: "2-digit",
     day: "2-digit",
   }).format(now);
+  if (
+    current?.observedAt.slice(0, 10) === today &&
+    current.highC !== null &&
+    current.lowC !== null
+  ) {
+    const todayForecast = result.find((day) => day.date === today);
+    const temperatures = {
+      highC: current.highC,
+      lowC: current.lowC,
+      temperatureNote: `Observed high / low so far today (as of ${current.observedTimeLabel} JST)`,
+    };
+    if (todayForecast) Object.assign(todayForecast, temperatures);
+    else
+      result.push({
+        date: today,
+        ...temperatures,
+        kind: current.kind,
+        label: "Today",
+        popPercent: null,
+        reliability: null,
+        weatherCode: "",
+      });
+  }
   return result
     .filter((day) => day.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date))

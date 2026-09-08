@@ -795,10 +795,14 @@ function WeatherCard({
               <div
                 className="flex flex-col items-center justify-center gap-1 overflow-hidden"
                 key={day.date}
+                title={day.temperatureNote}
               >
                 <p className="whitespace-nowrap text-[9px] font-light sm:text-[10px]">
                   {day.label}
                 </p>
+                {day.temperatureNote ? (
+                  <span className="sr-only">{day.temperatureNote}</span>
+                ) : null}
                 <WeatherIcon className="size-4.5 text-white sm:size-5" kind={day.kind} />
                 <div className="text-center leading-tight">
                   <p className="text-[11px]">{formatTemp(day.highC)}</p>
