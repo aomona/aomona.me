@@ -11,7 +11,14 @@ bun install
 bun run dev
 ```
 
-Open http://localhost:3000.
+Open the Local URL printed in the terminal (normally http://localhost:3000).
+
+You can run `bun dev` in multiple terminals. Each instance gets a separate
+Next.js output directory; Next automatically tries the next available port.
+Use `bun dev --port 3100` to request a specific port. Stop an instance with Ctrl+C.
+Development caches are stored in the ignored `.next-dev/` directory. They are
+retained after shutdown because generated type declarations may reference them.
+`bun run build` and `bun run start` continue to use `.next/`.
 
 ## Checks
 

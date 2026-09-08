@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["aomonamacbookpro.tail7a84e3.ts.net"],
@@ -26,4 +27,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default function config(phase: string): NextConfig {
+  if (phase !== PHASE_DEVELOPMENT_SERVER || !process.env.AOMONA_DEV_DIST_DIR) return nextConfig;
+  return {
+    ...nextConfig,
+    distDir: process.env.AOMONA_DEV_DIST_DIR,
+    typescript: { tsconfigPath: process.env.AOMONA_DEV_TSCONFIG },
+  };
+}
