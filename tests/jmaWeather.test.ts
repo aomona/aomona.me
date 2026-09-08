@@ -44,18 +44,30 @@ function fixture() {
 }
 
 function mockJma(
-  options: { forecast?: unknown; observedAt?: string; fail?: "forecast" | "map" | "latest" } = {},
+  options: {
+    forecast?: unknown;
+    observedAt?: string;
+    point?: unknown;
+    fail?: "forecast" | "map" | "latest" | "point";
+  } = {},
 ) {
   globalThis.fetch = (async (input) => {
     const url = String(input);
     if (
       options.fail &&
       url.includes(
-        options.fail === "latest" ? "latest_time" : options.fail === "map" ? "/map/" : "/forecast/",
+        options.fail === "latest"
+          ? "latest_time"
+          : options.fail === "map"
+            ? "/map/"
+            : options.fail === "point"
+              ? "/point/"
+              : "/forecast/",
       )
     ) {
       return new Response("unavailable", { status: 503 });
     }
+    if (url.includes("/point/")) return Response.json(options.point ?? {});
     if (url.endsWith("latest_time.txt"))
       return new Response(options.observedAt ?? time(today, "12"));
     if (url.includes("/map/"))
@@ -154,4 +166,54 @@ test("missing weather code stays unknown instead of becoming sunny", async () =>
   mockJma({ forecast });
   const weather = await getNagoyaWeather(now);
   assert.equal(weather.weekly.find((day) => day.date === tomorrow)?.kind, "unknown");
+});
+
+test("today displays actual daily extremes instead of forecast or current temperature", async () => {
+  mockJma({ point: { "20260907120000": { maxTemp: [27, 0], minTemp: [23.9, 0] } } });
+  const weather = await getNagoyaWeather(now);
+  assert.equal(weather.weekly[0]?.highC, 27);
+  assert.equal(weather.weekly[0]?.lowC, 23.9);
+  assert.match(weather.weekly[0]?.temperatureNote ?? "", /Observed high/);
+  assert.equal(weather.weekly[1]?.highC, 29);
+});
+
+test("daily extremes survive evening forecast without today's temperatures", async () => {
+  const forecast = fixture();
+  forecast[0]!.timeSeries[2] = {};
+  mockJma({ forecast, point: { "20260907120000": { maxTemp: [27, 0], minTemp: [23.9, 0] } } });
+  assert.equal((await getNagoyaWeather(now)).weekly[0]?.lowC, 23.9);
+});
+
+test("midnight extremes from previous day are not used", async () => {
+  mockJma({
+    observedAt: time(tomorrow),
+    point: { "20260908000000": { maxTemp: [40, 0], minTemp: [10, 0] } },
+  });
+  const weather = await getNagoyaWeather(new Date(time(tomorrow)));
+  assert.equal(weather.current?.highC, null);
+  assert.equal(weather.weekly[0]?.highC, 29);
+});
+
+test("yesterday's extremes are not displayed as today's", async () => {
+  mockJma({ point: { "20260907120000": { maxTemp: [40, 0], minTemp: [10, 0] } } });
+  assert.equal((await getNagoyaWeather(new Date(time(tomorrow)))).weekly[0]?.highC, 29);
+});
+
+test("point endpoint failure preserves forecast and current temperature", async () => {
+  mockJma({ fail: "point" });
+  const weather = await getNagoyaWeather(now);
+  assert.equal(weather.current?.temperatureC, 23.7);
+  assert.equal(weather.weekly[0]?.highC, 28);
+});
+
+test("invalid quality flags and unmatched timestamps cannot supply daily extremes", async () => {
+  mockJma({
+    point: {
+      "20260907120000": { maxTemp: [99, 1], minTemp: [-99, 1] },
+      "20260907115000": { maxTemp: [30, 0], minTemp: [20, 0] },
+    },
+  });
+  const weather = await getNagoyaWeather(now);
+  assert.equal(weather.current?.highC, null);
+  assert.equal(weather.weekly[0]?.lowC, null);
 });
