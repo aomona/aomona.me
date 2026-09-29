@@ -23,8 +23,9 @@ builds, headless Chromium, DPR 2, and 1440×1000 / 390×844 viewports.
   the SVG tile reduction does not apply to that path.
 - **Next.js 16.2.6 / React 19.2.6:** awaiting every profile fetch in `Home` blocked
   the whole page. Fetches still start together, but only the cards await the
-  promise inside `Suspense`. The server-rendered shell, hero and same-size card
-  placeholders can stream first. The Spotify subscription now belongs to the
+  promise inside `Suspense`. The server-rendered shell and hero can stream first,
+  with transparent spacers reserving the card layout without flashing empty frames.
+  The Spotify subscription now belongs to the
   card subtree, so its updates do not rerender the background or hero.
 - **Next.js image implementation:** `get-img-props.js` bypasses responsive image
   generation when global `unoptimized` is enabled. Removing it enables resizing
@@ -65,7 +66,8 @@ First-use image optimization also performs server work before its result is cach
 
 `bun run check` includes lint, type-aware lint, formatting, tsgo, 17 regression
 tests, and a production build. The streaming test holds all profile results
-pending, checks that hero and loading UI are already in the stream, then resolves
+pending, checks that hero and accessible loading text arrive without visible card
+frames, then resolves
 the results and checks that cards arrive. The existing 16 JMA regressions remain.
 
 Browser checks covered desktop, mobile, Android Chrome UA fallback, reduced motion

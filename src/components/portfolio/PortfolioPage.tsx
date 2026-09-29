@@ -21,11 +21,11 @@ export function PortfolioPage({ userAgent, data }: PortfolioProps) {
             {Array.from({ length: 9 }, (_, index) => (
               <div
                 key={index}
-                className={`rounded-[34px] border border-black/15 bg-white/10 ${
+                className={
                   index === 0 || index === 3 || index === 4
                     ? "col-span-2 aspect-2/1 md:aspect-auto"
                     : "aspect-square"
-                }`}
+                }
               />
             ))}
           </div>

@@ -31,6 +31,7 @@ test("hero streams before profile APIs resolve, then cards replace the fallback"
     }
     assert.match(initial, /High school developer/);
     assert.doesNotMatch(initial, /Open Discord community/);
+    assert.doesNotMatch(initial, /rounded-\[34px\]|border-black\/15|bg-white\/10/);
   } finally {
     resolve(profiles);
   }
