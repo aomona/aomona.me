@@ -36,6 +36,7 @@ bun run lint:type-aware  # Oxlint type-aware rules via oxlint-tsgolint
 bun run format:check     # Oxfmt check
 bun run format           # Oxfmt write
 bun run typecheck        # tsgo --noEmit
+bun run test             # Weather and streaming regression checks
 bun run build            # Next production build
 ```
 

@@ -12,7 +12,8 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "typecheck": "tsgo --noEmit",
-    "check": "bun run lint && bun run lint:type-aware && bun run format:check && bun run typecheck && bun run build"
+    "test": "bun test",
+    "check": "bun run lint && bun run lint:type-aware && bun run format:check && bun run typecheck && bun run test && bun run build"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

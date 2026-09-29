@@ -13,16 +13,7 @@ export default async function Home() {
     getTetrioProfile(),
   ]);
   const headersList = await headers();
-  const [weather, githubContributions, osuProfile, tetrioProfile] = await dataPromise;
   const userAgent = headersList.get("user-agent");
 
-  return (
-    <PortfolioPage
-      userAgent={userAgent}
-      weather={weather}
-      githubContributions={githubContributions}
-      osuProfile={osuProfile}
-      tetrioProfile={tetrioProfile}
-    />
-  );
+  return <PortfolioPage userAgent={userAgent} data={dataPromise} />;
 }

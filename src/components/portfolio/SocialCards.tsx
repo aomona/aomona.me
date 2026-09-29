@@ -19,6 +19,7 @@ import {
   useState,
 } from "react";
 import gsap from "gsap";
+import { useNowPlaying } from "./useNowPlaying";
 
 type CardGradient = {
   baseColor: string;
@@ -51,7 +52,7 @@ const cardBase =
 
 const cardGrainDefaults = {
   numOctaves: 2,
-  size: 1100,
+  size: 512,
   stitchTiles: true,
 } satisfies Pick<CardGradient, "numOctaves" | "size" | "stitchTiles">;
 
@@ -579,6 +580,7 @@ function NowPlayingContent({
             fill
             sizes="183px"
             src={artUrl}
+            unoptimized
             onError={() => setHasArtError(true)}
           />
         ) : (
@@ -846,22 +848,17 @@ function openUrl(url: string) {
 export function SocialCards({
   userAgent,
   weather,
-  track,
-  colors,
-  isLoading,
   githubContributions,
   osuProfile,
   tetrioProfile,
 }: {
   userAgent: string | null;
   weather: NagoyaWeather;
-  track: SpotifyTrack | null;
-  colors: string[] | null;
-  isLoading: boolean;
   githubContributions: GitHubContributions;
   osuProfile: OsuProfile;
   tetrioProfile: TetrioProfile;
 }) {
+  const { track, colors, isLoading } = useNowPlaying();
   const gridRef = useRef<HTMLDivElement>(null);
   const toastRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<string | null>(null);
