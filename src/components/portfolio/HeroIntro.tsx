@@ -30,7 +30,7 @@ export function HeroIntro() {
           alt="AOMONA avatar"
           className="size-41 rounded-full object-cover shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
           height={164}
-          priority
+          preload
           src="https://github.com/aomona.png"
           width={164}
         />

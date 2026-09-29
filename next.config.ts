@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["aomonamacbookpro.tail7a84e3.ts.net"],
   reactCompiler: true,
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

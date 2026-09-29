@@ -1,67 +1,25 @@
-"use client";
-
-import { useNowPlaying } from "./useNowPlaying";
+import type { ReactNode } from "react";
 import { HeroIntro } from "./HeroIntro";
-import { SocialCards } from "./SocialCards";
-import { WebGLGrainGradient } from "grain-gradient/webgl/react";
-import type { NagoyaWeather } from "@/lib/jmaWeather";
-import type { GitHubContributions } from "@/lib/githubContributions";
-import type { OsuProfile } from "@/lib/osuProfile";
-import type { TetrioProfile } from "@/lib/tetrioProfile";
+import { PortfolioBackground } from "./PortfolioBackground";
 
 export function PortfolioShell({
   userAgent,
-  weather,
-  githubContributions,
-  osuProfile,
-  tetrioProfile,
+  children,
 }: {
   userAgent: string | null;
-  weather: NagoyaWeather;
-  githubContributions: GitHubContributions;
-  osuProfile: OsuProfile;
-  tetrioProfile: TetrioProfile;
+  children: ReactNode;
 }) {
-  const { track, colors, isLoading } = useNowPlaying();
-
   return (
-    <WebGLGrainGradient
-      androidCanvasFallback="auto"
-      androidCanvasFallbackUserAgent={userAgent}
-      className="min-h-dvh text-white"
-      baseColor="#031a58"
-      colors={["#003fa6", "#0078e6", "#16b4eb", "#05388d", "#67c7f4"]}
-      opacity={0.23}
-      frequency={0.5}
-      numOctaves={4}
-      contrast={1.2}
-      blur={20}
-      saturation={1.32}
-      swirl={34}
-      motionPreset="orbit"
-      motionSpeed={22}
-      motionIntensity={34}
-      maxPixelRatio={1.25}
-      motionMaxPixelRatio={0.75}
-      fps={30}
-    >
+    <div className="relative isolate min-h-dvh text-white">
+      <PortfolioBackground userAgent={userAgent} />
       <div className="relative z-10 min-h-dvh">
         <main className="flex min-h-dvh items-center justify-center px-6 py-5 sm:px-10 lg:px-16">
           <div className="flex w-full max-w-[1312px] flex-col items-center gap-10 min-[1141px]:h-[calc(100dvh-40px)] min-[1141px]:flex-row">
             <HeroIntro />
-            <SocialCards
-              userAgent={userAgent}
-              weather={weather}
-              githubContributions={githubContributions}
-              osuProfile={osuProfile}
-              tetrioProfile={tetrioProfile}
-              track={track}
-              colors={colors}
-              isLoading={isLoading}
-            />
+            {children}
           </div>
         </main>
       </div>
-    </WebGLGrainGradient>
+    </div>
   );
 }
